@@ -9,14 +9,6 @@ Upload **all files in this folder together** (keep them in the same folder):
 | `sw.js` | Lets the app open offline and show notifications |
 | `icon-192.png`, `icon-512.png`, `maskable-512.png`, `apple-touch-icon.png` | Home-screen icons |
 
-## Publish for free with GitHub Pages
-
-1. Make a free account at github.com.
-2. Click **New repository**, name it e.g. `ufe-planner`, choose **Public**, click **Create repository**.
-3. Click **uploading an existing file**, drag in every file from this folder, then click **Commit changes**.
-4. Open **Settings → Pages**. Under *Build and deployment*, choose **Deploy from a branch**, branch **main**, folder **/ (root)**, then **Save**.
-5. After 1–2 minutes your app is live at `https://YOUR-USERNAME.github.io/ufe-planner/`.
-
 ## Install it like an app
 
 - **Android (Chrome):** open the link → menu ⋮ → **Add to Home screen** / **Install app**.
