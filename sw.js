@@ -1,6 +1,6 @@
 /* UFE Planner service worker: lets the app open offline and shows notifications.
    Change CACHE to a new name (e.g. 'ufe-planner-v2') whenever you upload a new version. */
-const CACHE = 'ufe-planner-v1';
+const CACHE = 'ufe-planner-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'maskable-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
