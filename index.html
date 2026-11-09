@@ -1,0 +1,1292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Calendar, deadlines, UFE timetable, courses, reminders and a focus timer for UFE students.">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#13161c" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="UFE Planner">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>UFE Academic Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600&display=swap">
+<style>
+/* Layout: quiet tinted sidebar beside a single white working canvas; on phones the canvas goes full-bleed with a bottom tab bar */
+:root{
+  --accent-l:#21409a; --accent-d:#9cb0ec;
+  /* light and dark grounds, swapped by the two "background" settings */
+  --l-bg:#f3f4f7; --l-canvas:#ffffff; --l-sunken:#f5f6f9; --l-hover:#eef0f4; --l-line:#e6e8ed; --l-line-strong:#d4d8e0;
+  --d-bg:#0c0e12; --d-canvas:#13161c; --d-sunken:#181b22; --d-hover:#1d2129; --d-line:#242932; --d-line-strong:#313744;
+  --bg:var(--l-bg); --canvas:var(--l-canvas); --sunken:var(--l-sunken); --hover:var(--l-hover); --line:var(--l-line); --line-strong:var(--l-line-strong);
+  --logo:#21409a;
+  --fg:#141821; --muted:#676d7c; --faint:#9399a6;
+  --accent:var(--accent-l); --on-accent:#ffffff;
+  --bad:#c0362c; --warn:#9f5c00; --good:#1f7a45;
+  --accent-soft:color-mix(in oklab, var(--accent) 8%, var(--canvas));
+  --ring:color-mix(in oklab, var(--accent) 28%, transparent);
+  --page:var(--canvas);
+  --font:"Onest", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --logo:#a9bbf0;
+    --bg:var(--d-bg); --canvas:var(--d-canvas); --sunken:var(--d-sunken); --hover:var(--d-hover); --line:var(--d-line); --line-strong:var(--d-line-strong);
+    --fg:#e8eaef; --muted:#999faf; --faint:#6c7382;
+    --accent:var(--accent-d); --on-accent:#0c0e12;
+    --bad:#ff8a7e; --warn:#f0b357; --good:#6dd29a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --logo:#a9bbf0;
+  --bg:var(--d-bg); --canvas:var(--d-canvas); --sunken:var(--d-sunken); --hover:var(--d-hover); --line:var(--d-line); --line-strong:var(--d-line-strong);
+  --fg:#e8eaef; --muted:#999faf; --faint:#6c7382;
+  --accent:var(--accent-d); --on-accent:#0c0e12;
+  --bad:#ff8a7e; --warn:#f0b357; --good:#6dd29a;
+  color-scheme:dark;
+}
+@media (min-width:900px){ :root{ --page:var(--bg) } }
+
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--fg);font:400 14.5px/1.55 var(--font);-webkit-font-smoothing:antialiased}
+body.locked{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-size:clamp(24px,3vw,30px);font-weight:600;letter-spacing:-.025em;line-height:1.15}
+h2{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.empty{color:var(--muted);margin:10px 0;font-size:14px}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--cc);display:inline-block;flex:none}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:minmax(0,1fr);max-width:1440px;margin:0 auto;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fg);font-size:15px;letter-spacing:-.01em;white-space:nowrap}
+.brand-mark{width:28px;height:26px;flex:none;background:var(--logo);
+  -webkit-mask:var(--logo-img) center/contain no-repeat;mask:var(--logo-img) center/contain no-repeat;
+  --logo-img:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABYCAYAAAAKsfL4AAAHOUlEQVR42u2d+4scRRDHPzOzd9GIiqA/xGhUfIXEJEaChqAgIoiQx0UF/UXFf0BEEESEQIL+IqK/qT+pURQxxvMdicGIqPgKRhPMGZ/x/daYaMztzvhDd10q4+5Nz97s7vTcFAy3t4+Z7qrqb1dXVVeDXxQWcI8ICMrSIWnIEuAMoFVQJ4uiRLVzB7DTvk66FF6ifnsycA5wjH2vX0KJrRJ8Brwrb65XjSvr1QTWdTkSIvX6CmAzsH/A/XkcoGEbtc92sKneKyP83A68BzxjmdpyZH4LOAW4D7g8pY1xn/shPP5LCyBUr8sqgHH792orgCAH85fY35xoGRDYPocDgtyGPLeszO40AkLg2NT8MNn3W8DpwIvACWUc4aFHAhDs/DplQGRp2vqyMt83AYSW6ZscRkDDYvu1wLIyz22+CCC2bf0JeFW914laVlg39tnE7FoAgQcCSICXgT/t5Jpk2PuLgAVtzNB6BHS5YAyAp9XrrD6N5DBVawFkTL6RhZ8t9v9WBvxEwCof+uiDAFqW6ZuBvY7ws8BCUFILoDjr50mH+Ur6s9p+rzUdvIu9hh+xfraqEZFl/Yz4omChJ/CzycH6kc/OBeb7AD8+CEAsnlEH6yfwyfrxQQBi/fyYw/ppKOsnqAVQDPy84mD9yGcL7ZWUefGV9pmItsUMxj+eBUEu1o98tkIFbxolXtXLyn6ikcN2NAyXbHT+DryWYf2IuTmMcb6VrR9pkrbN0JpzNiZYEZcEO8WC+Q3YnqNjSz0yrb8DxnzxA1WWgtRqs4zaEncZfMeDkRBTU0011VRTTTUN3sQLSpYPWnUzNanVr0QjIFLhvEG7H5o57eMhD7UpsH1siQDWAddg8i8bA8z7+R64DDiQkYausyTmlTCtnozk3CGMk/E2YfZszP6AQdNblvmTBVRCK7B5wEqP0Wc2StsP2k41BzgCGsAjjjAVA1faETLuWZKx8PigFsAg07WF+XvsCHBNO1xh/0Ye5rhO+N7CkgQoAF7C7FpxzftZ7EvgvewhSWnDUzm+u1zNE0EtgKlbP3uA1x3hJ7L4j+/aXxYBJMDzyvrJgp95mNyfpBZAcWmHG3O0dURtP6IWwNTh50vgzRzWz6oqhSrDElg/LwD/WFM0C34WKviJagEU8+yNDt5B+e5Kn9IOyywADT9vOMJP6MumC18EgLV+/nWEn/lVWXyVQQDy3A054Gd1layfQQpA4Odz4O0c1s9IFRO1wgHDz4EM+PE265mc2dGx1bR++Fak5ICL9RMo30+AceE2POd5S0XEJjoz02pWP7Qrwvh+XBdfw8D1drTOqIDSR4rnEwL4EJMG3uyxEGQXy3OYQIpL5GsW8A3wbUVQR3iwnZooTVZE1ga4Xk7GeTbrVYmSOjeopppqqqmmmmqqzdBeJ2QlOb2YERXfHVnCTfHTewQsxWzWLtoZJ8GTnzGZby6FtxuY+s5HVHShIh7dTziUitnz4t0POpRFjpQyJNPgekwzZL/V/iKzoxNVs/OBHK7nkR60hRJmR+9LF++OCg54SOTrU2Cb9oHT2Us4pAouBVQo9tsGgsJeF24VZo9iAiku9X7OA86qWuB9sk160skD9C7cOZoDfq7ypdphAfSrZtLuHgXedwHvODBV4Gd51fJ+JqEx3dFtBXdcB97HM+YVgZ/zgblKeFUl4cUOzfAPMHX5w4JWZ8LUDTngZ1UXgRofV78BJiXnI310yX7Mls8iGCAPGQPedyi22sQE3kemAfwIb59VKTkTHZ5rrZWW2jjRzTVu/96ZY/G1TBUwqvLiq2X5M1+ULVTnWu2yK+Kppv8J/Iw6jCiBnysdRkoVFmAh8ATmPLTD4F52qsyyfptY1e3MK+HE4lvDcX0xZOEq6fKZPlzCz73AqZ0WmZE66EygJO4Sfu7IAT8XVZz5iYX2BLghq7adMGxNl0KI1bldWUX05Fl3p4RXNc0X5t/jek6bfOEupZnNnPATOVa6nWF9RVUcAZpv9+cJNAVKc29RI2A8g0miwWtzwM+FFWR+nBrNa7stDSpMugSTO6oP1WymzFVdd3qxgz0v9763TYN9Y3aszEuNFGMp10owlWXzkcBNmChOp5NOY7uidoWfhrpfKzWHjKsOxQVBgb5nq4D7dvr9F8CtHDpyccrufX2DmXbFuh74GPg71Zg1OeDnUvIdZesqjFgxvB+j4A877z2E2UZ1dJ5Kvq7DImizQIuAOcBxKsiwG3PUSFa1q8SuOU5Sp5vKUD0eOM3GBS7A7Iw5qk29iMlqSWj6yirLTsy+hB8wZ9Lsm6LbRTaM/GLvmaR4E/ciph30cSOH0BzgOsyJqAdTWh6r13oEbAVutvPRzD56OfuaTpMu8pT34brYkr5HZCGs3Up6EfDwJHDwqHVrtwsOyT0jdYUFXFVMnf8f89JVsS7G7OiRiXWLXVFr4TZKXBXee2EIncnhxQajaRJNK0VUKeiwePSK/gP2MJY/+VqeAgAAAABJRU5ErkJggg==")}
+.disclaimer{font-size:11.5px;color:var(--faint);line-height:1.4}
+.brand b{font-weight:600}
+.brand em{font-style:normal;color:var(--muted)}
+.side{display:none}
+.mtop{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 0}
+.mtop-r{display:flex;align-items:center;gap:2px}
+.mtop-r a{display:grid;place-items:center;width:38px;height:38px;border-radius:8px;color:var(--muted)}
+.mtop-r a[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+.lang-btn{height:30px;min-width:38px;padding:0 9px;border-radius:8px;border:1px solid var(--line-strong);background:var(--canvas);font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;margin-right:4px}
+.canvas{min-width:0;padding-block:18px 112px;display:flex;flex-direction:column;gap:28px}
+.canvas:focus{outline:none}
+
+.nav{display:flex;flex-direction:column;gap:22px;flex:1}
+.nav-g{display:flex;flex-direction:column;gap:1px}
+.nav-g:last-child{margin-top:auto}
+.nav-l{margin:0;padding:0 10px 6px;font-size:11.5px;font-weight:500;color:var(--faint)}
+.nav a{display:flex;align-items:center;gap:11px;padding:7px 10px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:500;font-size:14px}
+.nav a:hover{color:var(--fg);background:var(--hover)}
+.nav a[aria-current="page"]{color:var(--fg);background:var(--canvas);box-shadow:0 0 0 1px var(--line)}
+.nav a[aria-current="page"] svg{color:var(--accent)}
+.nav-n{margin-left:auto;font-size:12px;font-weight:600;color:var(--bad);font-variant-numeric:tabular-nums}
+.nav-n[data-badge="focus"]{color:var(--accent)}
+.side-foot{padding:14px 10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:var(--muted)}
+.side-foot b{color:var(--fg);font-weight:500}
+.sem{display:flex;justify-content:space-between;gap:8px}
+.sem-bar{height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+.sem-bar i{display:block;height:100%;background:var(--accent)}
+.side-lang{margin-top:4px}
+
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  background:color-mix(in oklab, var(--canvas) 90%, transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  padding:6px max(16px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;color:var(--faint);font-size:10.5px;font-weight:500;text-decoration:none;position:relative;border-radius:8px;white-space:nowrap}
+.tabbar a[aria-current="page"]{color:var(--accent)}
+.tabbar svg{width:22px;height:22px}
+.tdot{position:absolute;top:3px;left:calc(50% + 8px);width:7px;height:7px;border-radius:50%;background:var(--bad)}
+.tdot[data-badge="focus"]{background:var(--accent)}
+
+@media (min-width:900px){
+  .app{grid-template-columns:224px minmax(0,1fr);gap:14px}
+  .side{display:flex;flex-direction:column;gap:28px;position:sticky;top:0;height:100vh;padding-block:22px 20px;padding-inline:2px}
+  .side .brand{padding:0 10px}
+  .mtop,.tabbar{display:none}
+  .canvas{background:var(--canvas);border:1px solid var(--line);border-radius:14px;margin-block:12px;padding:36px clamp(24px,3.4vw,52px) 60px;min-height:calc(100vh - 24px);gap:32px}
+}
+
+/* ---------- controls ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--line-strong);background:var(--canvas);color:var(--fg);font-size:13.5px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;line-height:1}
+.btn:hover{background:var(--hover)}
+.btn svg{width:16px;height:16px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{background:color-mix(in oklab, var(--accent) 86%, var(--fg))}
+.btn.sm{height:30px;padding:0 11px;font-size:13px}
+.btn.lg{height:46px;padding:0 24px;font-size:15px;border-radius:10px}
+.btn.lg.primary{min-width:148px}
+.btn.danger{color:var(--bad)}
+.btn[data-armed],.lnk[data-armed]{background:var(--bad);border-color:var(--bad);color:var(--canvas);border-radius:6px;padding:4px 8px}
+.icon-btn{border:0;background:transparent;padding:7px;border-radius:7px;cursor:pointer;color:var(--muted);display:inline-grid;place-items:center}
+.icon-btn:hover{background:var(--hover);color:var(--fg)}
+.lnk{color:var(--accent);font-size:13px;font-weight:500;text-decoration:none;background:none;border:0;padding:0;cursor:pointer;white-space:nowrap}
+.lnk:hover{text-decoration:underline;text-underline-offset:3px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;background:var(--sunken);border:1px solid var(--line);border-radius:9px;max-width:100%}
+.seg button,.seg label span{display:block;border:0;background:transparent;padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+.seg button:hover,.seg label:hover span{color:var(--fg)}
+.seg button[aria-pressed="true"],.seg input:checked + span{background:var(--canvas);color:var(--fg);box-shadow:0 1px 2px rgba(16,20,30,.08),0 0 0 1px var(--line)}
+.seg label{position:relative}
+.seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.seg input:focus-visible + span{outline:2px solid var(--accent)}
+.seg.xs button{padding:3px 10px;font-size:12px}
+select,input[type="text"],input[type="date"],input[type="time"],input[type="number"],textarea{height:36px;background:var(--canvas);border:1px solid var(--line-strong);border-radius:8px;padding:0 10px;font-size:14px;min-width:0;max-width:100%}
+textarea{height:auto;padding:8px 10px;resize:vertical;width:100%}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.field{display:flex;flex-direction:column;gap:6px;border:0;padding:0;margin:0;min-width:0}
+.field > span,.field legend,.field .lbl{font-size:12.5px;font-weight:500;color:var(--muted);padding:0}
+.field legend{margin-bottom:6px}
+.field input:not([type="radio"]):not([type="checkbox"]),.field select{width:100%}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.row2{grid-template-columns:1fr}}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* ---------- page header ---------- */
+.ph{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px 24px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.ph > div:first-child{min-width:0}
+.ph-k{margin:0 0 6px;font-size:13px;color:var(--muted)}
+.summary{margin:12px 0 0;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13.5px;color:var(--muted)}
+.summary b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
+.summary .bad,.summary .bad b{color:var(--bad)}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:4px}
+.grp{display:flex;gap:6px;margin:18px 0 0;font-size:12.5px;font-weight:500;color:var(--muted)}
+.grp span{color:var(--faint);font-variant-numeric:tabular-nums}
+.grp.bad,.grp.bad span{color:var(--bad)}
+.split{display:grid;gap:40px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1120px){.split{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:60px}}
+
+/* ---------- today ---------- */
+.notice{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;padding:10px 14px;border:1px dashed var(--line-strong);border-radius:10px;font-size:13.5px;color:var(--muted)}
+.notice > span{flex:1 1 240px}
+.rems{display:flex;flex-direction:column;background:var(--accent-soft);border-radius:12px;padding:2px 16px}
+.rem{display:flex;align-items:center;gap:12px;padding:11px 0}
+.rem + .rem{border-top:1px solid color-mix(in oklab, var(--accent) 14%, transparent)}
+.rem > svg{color:var(--accent)}
+.rem > div{flex:1;min-width:0;display:flex;flex-direction:column}
+.rem b{font-weight:500;overflow-wrap:anywhere}
+.rem small{font-size:12.5px;color:var(--muted)}
+.rows{list-style:none;margin:0;padding:0}
+.rows > li + li{border-top:1px solid var(--line)}
+.cls{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:14px;padding:12px 0;align-items:start}
+.cls-t{display:flex;flex-direction:column;font-size:13px;font-weight:500;line-height:1.35;font-variant-numeric:tabular-nums}
+.cls-t small{font-size:12px;font-weight:400;color:var(--faint)}
+.cls-b{display:flex;flex-direction:column;gap:1px;min-width:0}
+.cls-n{display:flex;align-items:center;gap:8px;min-width:0}
+.cls-n b{font-weight:600;white-space:nowrap}
+.cls-n span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cls-b small{font-size:12.5px;color:var(--muted);padding-left:15px}
+.cls.past{opacity:.45}
+.tag{font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:2px 9px;border-radius:20px;white-space:nowrap}
+
+/* ---------- task rows ---------- */
+.task{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:2px 14px;padding:12px 0}
+.check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line-strong);background:transparent;display:grid;place-items:center;cursor:pointer;padding:0;color:transparent}
+.check svg{width:12px;height:12px;stroke-width:2.6}
+.check:hover{border-color:var(--accent);color:var(--accent)}
+.is-done .check{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.task-main{border:0;background:none;text-align:left;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0}
+.task-title{font-weight:500;overflow-wrap:anywhere}
+.task-main:hover .task-title{color:var(--accent)}
+.is-done .task-title{text-decoration:line-through;color:var(--faint)}
+.task-meta{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;font-size:12.5px;color:var(--muted)}
+.task-meta > span{display:inline-flex;align-items:center;gap:6px}
+.task-meta > span + span::before{content:"·";color:var(--faint)}
+.task-meta .code{color:var(--fg);font-weight:500}
+.task-meta .hi{color:var(--bad)}
+.due{font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.due-over{color:var(--bad);font-weight:500}
+.due-soon{color:var(--warn);font-weight:500}
+.due-near{color:var(--fg)}
+.due-done{color:var(--faint)}
+@media (max-width:560px){.task{grid-template-columns:auto minmax(0,1fr)}.due{grid-column:2}}
+
+/* ---------- calendar ---------- */
+.cal-layout{display:grid;gap:32px;grid-template-columns:minmax(0,1fr);align-items:start}
+@media (min-width:1300px){.cal-layout{grid-template-columns:minmax(0,1fr) 300px;gap:40px}}
+.cal-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.cal-nav{display:flex;align-items:center;gap:2px}
+.cal-nav h2{margin-left:8px;font-size:17px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.dow{background:var(--canvas);padding:8px 10px;font-size:12px;font-weight:500;color:var(--muted)}
+.day{background:var(--canvas);border:0;min-height:100px;padding:6px 7px 8px;display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;min-width:0;color:var(--fg)}
+.day:hover{background:var(--hover)}
+.day.out{background:var(--sunken);color:var(--faint)}
+.day.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+.dn{width:24px;height:24px;display:grid;place-items:center;border-radius:50%;font-size:12.5px;font-weight:500;font-variant-numeric:tabular-nums}
+.day.today .dn{background:var(--accent);color:var(--on-accent)}
+.k-uni{--k:var(--accent)} .k-exam{--k:var(--bad)} .k-personal{--k:var(--good)}
+.evl{display:block;max-width:100%;font-size:11px;font-weight:500;line-height:1.5;padding:0 6px;border-radius:4px;color:var(--k);background:color-mix(in oklab, var(--k) 12%, var(--canvas));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{display:flex;align-items:center;gap:5px;max-width:100%;font-size:11.5px;line-height:1.35;white-space:nowrap;overflow:hidden}
+.chip span{overflow:hidden;text-overflow:ellipsis}
+.chip.ex span{font-weight:600}
+.chip.done span{text-decoration:line-through;color:var(--faint)}
+.more{font-size:11px;color:var(--muted)}
+.dots{display:none;flex-wrap:wrap;gap:3px;margin-top:auto}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--cc)}
+.dots i.kd{background:var(--k);border-radius:1px;width:10px;height:3px;align-self:center}
+.dots i.d{opacity:.35}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:12px;height:4px;border-radius:2px;background:var(--k)}
+.dp{display:flex;flex-direction:column;gap:2px}
+.dp h2{font-size:17px}
+.dp-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+.evlist{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ev{width:100%;display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid var(--line);background:var(--canvas);padding:9px 11px;border-radius:8px;cursor:pointer}
+.ev:hover{background:var(--hover)}
+.ev i{width:8px;height:8px;border-radius:2px;margin-top:7px;flex:none;background:var(--k)}
+.ev span{display:flex;flex-direction:column;min-width:0}
+.ev b{font-weight:500}
+.ev small{color:var(--muted);font-size:12.5px}
+.mini{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.mini li{display:flex;align-items:center;gap:9px}
+.mini .t{color:var(--muted);font-variant-numeric:tabular-nums;min-width:84px}
+@media (max-width:700px){
+  .day{min-height:58px;padding:4px}
+  .evl,.chip,.more{display:none}
+  .dots{display:flex}
+  .dow{padding:6px 2px;text-align:center}
+  .dn{width:22px;height:22px;font-size:12px}
+}
+
+/* ---------- timetable ---------- */
+.tt-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.tt{display:grid;grid-template-columns:84px repeat(6,minmax(112px,1fr));grid-template-rows:auto repeat(6,minmax(50px,auto)) 30px repeat(6,minmax(50px,auto));min-width:756px;gap:1px;background:var(--line)}
+.tt-c{background:var(--canvas);padding:4px;display:flex;flex-direction:column;min-width:0}
+.tt-c.is-today:not(.tt-h){background:color-mix(in oklab, var(--accent) 3%, var(--canvas))}
+.tt-h{padding:10px 6px;font-size:12.5px;font-weight:500;color:var(--muted);text-align:center;justify-content:center}
+.tt-h.is-today{color:var(--accent)}
+.tt-t{flex-direction:row;align-items:center;gap:8px;padding:0 10px;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.3}
+.tt-t b{font-size:13px;font-weight:600;color:var(--fg);min-width:16px}
+.tt-t span{display:flex;flex-direction:column}
+.tt-break{background:var(--sunken);flex-direction:row;align-items:center;justify-content:center;font-size:11.5px;color:var(--muted);padding:0 10px}
+.tt-blk{position:relative;z-index:1}
+.blk{flex:1;display:flex;flex-direction:column;gap:2px;text-align:left;border:0;border-radius:7px;padding:8px 9px;background:color-mix(in oklab, var(--cc) 12%, var(--canvas));cursor:pointer;font-size:12px;min-width:0;color:var(--fg)}
+.blk:hover{background:color-mix(in oklab, var(--cc) 20%, var(--canvas))}
+.blk b{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+.blk span{color:var(--muted)}
+.blk .tm{margin-top:auto;font-variant-numeric:tabular-nums}
+.slot{flex:1;border:1px dashed transparent;background:transparent;border-radius:7px;color:transparent;cursor:pointer;display:grid;place-items:center}
+.slot:hover,.slot:focus-visible{border-color:var(--line-strong);color:var(--muted)}
+@media (hover:none){.slot{color:var(--line-strong)}}
+
+/* ---------- courses ---------- */
+.tbl{border-top:1px solid var(--line)}
+.tr{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1.3fr) minmax(0,.8fr) 80px 110px 64px;gap:16px;align-items:center;width:100%;padding:14px 8px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;cursor:pointer;font-size:14px}
+.tr:hover{background:var(--hover)}
+.tr.th{cursor:default;padding-block:10px;font-size:12.5px;font-weight:500;color:var(--muted)}
+.tr.th:hover{background:none}
+.c-name{display:flex;flex-direction:column;gap:1px;min-width:0}
+.c-name b{display:flex;align-items:center;gap:8px;font-weight:600}
+.c-name span{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis}
+.c-meta{display:none}
+.tr .r{text-align:right;font-variant-numeric:tabular-nums}
+.tr .soft{color:var(--muted)}
+@media (max-width:760px){
+  .tr{grid-template-columns:minmax(0,1fr) auto}
+  .tr.th{display:none}
+  .tr > .c-x{display:none}
+  .c-meta{display:block}
+}
+
+/* ---------- focus ---------- */
+.focus{display:grid;gap:44px;grid-template-columns:minmax(0,1fr);align-items:start}
+@media (min-width:1120px){.focus{grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:60px}}
+.timer{display:flex;flex-direction:column;align-items:center;gap:26px;padding-block:6px}
+.ring{position:relative;width:280px;max-width:100%;aspect-ratio:1}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none}
+.trk{stroke:var(--line);stroke-width:3}
+.prg{stroke:var(--accent);stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .3s linear}
+.ring.brk .prg{stroke:var(--good)}
+.ring-in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.p-time{font-size:66px;font-weight:300;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.p-label{font-size:13px;color:var(--muted)}
+.p-ctrl{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.p-attach{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:520px}
+@media (max-width:560px){.p-attach{grid-template-columns:1fr}}
+.wk-total{font-size:30px;font-weight:500;letter-spacing:-.02em;margin:4px 0 18px;font-variant-numeric:tabular-nums}
+.bars{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.bars li{display:grid;grid-template-columns:76px minmax(0,1fr) 72px;align-items:center;gap:12px;font-size:13px}
+.bl{display:flex;align-items:center;gap:7px;font-weight:500;overflow:hidden;white-space:nowrap}
+.bt{height:6px;background:var(--sunken);border-radius:3px;overflow:hidden}
+.bt i{display:block;height:100%;background:var(--cc);border-radius:3px}
+.bv{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.log{list-style:none;margin:8px 0 0;padding:0;font-size:13.5px}
+.log li{display:flex;gap:12px;padding:8px 0;border-top:1px solid var(--line);min-width:0}
+.log li span:first-child{color:var(--muted);min-width:52px;font-variant-numeric:tabular-nums}
+.log li span:last-child{min-width:0;overflow-wrap:anywhere}
+
+/* ---------- settings ---------- */
+.set{max-width:900px;display:flex;flex-direction:column}
+.set h2{padding-bottom:4px}
+.srow{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:18px 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+@media (min-width:760px){.srow{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px}}
+.srow-l{min-width:0}
+.srow-l label,.srow-l > span{font-weight:500;display:block}
+.srow-l p{margin:3px 0 0;font-size:13px;color:var(--muted)}
+.srow-c{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0}
+.srow-c > input[type="text"],.srow-c > select,.srow-c > input[type="date"]{width:100%;max-width:320px}
+.srow-c input[type="number"]{width:88px}
+.unit{color:var(--muted);font-size:13px}
+.sws{display:grid;grid-template-columns:repeat(auto-fill,30px);gap:12px;width:100%}
+.sw{width:30px;height:30px;border-radius:50%;border:0;padding:0;cursor:pointer;position:relative;background:var(--l);background:light-dark(var(--l),var(--d))}
+.sw[aria-pressed="true"],.sw.on{box-shadow:0 0 0 2px var(--canvas),0 0 0 4px var(--fg)}
+.sw-custom{background:conic-gradient(#d9483f,#e0a028,#3f9a52,#1b86c9,#5b4bc4,#c03f8f,#d9483f)}
+.sw-custom.set{background:var(--l);background:light-dark(var(--l),var(--d))}
+.sw-custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+.sw-custom:focus-within{outline:2px solid var(--accent);outline-offset:4px}
+.acc-name{font-size:13px;color:var(--muted)}
+.bgopts{display:flex;flex-wrap:wrap;gap:8px}
+.bgopt{display:inline-flex;align-items:center;gap:9px;height:36px;padding:0 12px 0 6px;border-radius:9px;border:1px solid var(--line-strong);background:var(--canvas);font-size:13px;font-weight:500;color:var(--muted);cursor:pointer}
+.bgopt:hover{color:var(--fg)}
+.bgopt i{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%);box-shadow:inset 0 0 0 1px rgba(128,128,128,.35)}
+.bgopt[aria-pressed="true"]{color:var(--fg);border-color:var(--fg)}
+.backup{font-size:12px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed;inset:0;z-index:50;background:rgba(8,10,16,.45);display:flex;align-items:flex-end;justify-content:center;padding:env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px)}
+.sheet{background:var(--canvas);width:100%;max-width:540px;max-height:92vh;display:flex;flex-direction:column;border-radius:16px 16px 0 0;border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.25);margin:0}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;padding:18px 22px 4px}
+.sheet-h h2{font-size:17px}
+.sheet-b{padding:14px 22px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.sheet-f{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 22px calc(14px + env(safe-area-inset-bottom, 0px));border-top:1px solid var(--line)}
+.sp{flex:1}
+.subs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.subs:empty{display:none}
+.sub-row{display:flex;align-items:center;gap:8px}
+.sub-row input[type="text"]{flex:1}
+.sub-row input[type="checkbox"]{width:17px;height:17px;flex:none;accent-color:var(--accent)}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.swatch{position:relative}
+.swatch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.swatch span{display:block;width:26px;height:26px;border-radius:50%;background:var(--c)}
+.swatch input:checked + span{box-shadow:0 0 0 2px var(--canvas),0 0 0 4px var(--fg)}
+.swatch input:focus-visible + span{outline:2px solid var(--accent);outline-offset:5px}
+.m-links{display:flex;gap:18px;flex-wrap:wrap}
+@media (min-width:640px){.scrim{align-items:center;padding:24px}.sheet{border-radius:14px;max-height:86vh}}
+
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom, 0px));transform:translate(-50%,8px);background:var(--fg);color:var(--canvas);padding:10px 16px;border-radius:9px;font-size:13.5px;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (min-width:900px){.toast{bottom:28px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" aria-label="UFE Planner">
+    <a class="brand" href="#today"><span class="brand-mark" aria-hidden="true"></span><span><b>UFE</b> <em class="brand-word">Planner</em></span></a>
+    <nav class="nav" id="side-nav"></nav>
+    <div class="side-foot" id="side-foot"></div>
+  </aside>
+  <div class="mtop">
+    <a class="brand" href="#today"><span class="brand-mark" aria-hidden="true"></span><span><b>UFE</b> <em class="brand-word">Planner</em></span></a>
+    <div class="mtop-r" id="mtop-r"></div>
+  </div>
+  <main class="canvas" id="main" tabindex="-1"></main>
+</div>
+<nav class="tabbar" id="tabbar"></nav>
+<div class="scrim" id="scrim" hidden><form class="sheet" id="sheet" aria-labelledby="sheet-t"></form></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+/* ================= constants ================= */
+const KEY='ufe-planner-v1';
+/* UFE periods (пар): 50 minutes each, 10-minute breaks, lunch 13:30–14:20 */
+const PERIODS=[['07:40','08:30'],['08:40','09:30'],['09:40','10:30'],['10:40','11:30'],['11:40','12:30'],['12:40','13:30'],
+  ['14:20','15:10'],['15:20','16:10'],['16:20','17:10'],['17:20','18:10'],['18:20','19:10'],['19:20','20:10']];
+const ROW=p=>p<6?p+2:p+3; /* grid row of a period: header is row 1, lunch break is row 8 */
+const COLORS=['#4f6bed','#12a38f','#e0663b','#b5559b','#c99a1a','#3b9bd1','#7d63d6','#5a8f3a'];
+const ACCENTS={
+  navy:['UFE blue','UFE хөх','#21409a'], royal:['Royal blue','Хаан хөх','#2446c4'], azure:['Azure','Цэнхэр','#0a63b0'], ocean:['Ocean','Далайн','#0b6e8f'],
+  teal:['Teal','Усан ногоон','#0f766e'], emerald:['Emerald','Маргад','#067a52'], forest:['Forest','Ойн ногоон','#2d6a3e'], olive:['Olive','Чидун','#5c6a1c'],
+  amber:['Amber','Хув','#9a5b00'], orange:['Orange','Улбар шар','#b4480e'], rust:['Rust','Зэвэрсэн','#a23b26'], crimson:['Crimson','Час улаан','#b1213b'],
+  rose:['Rose','Сарнай','#b8195c'], magenta:['Magenta','Ягаан','#9d1fa8'], plum:['Plum','Чавга','#74318a'], violet:['Violet','Нил ягаан','#5a3dc8'],
+  indigo:['Indigo','Гүн хөх','#3f3bb5'], slate:['Slate','Хөх саарал','#46546a'], graphite:['Graphite','Бараан саарал','#34373e'], mocha:['Mocha','Кофе','#77502f']
+};
+/* dark-mode grounds: bg, canvas, sunken, hover, line, line-strong */
+const DARKBG={
+  charcoal:['Charcoal','Нүүрсэн',['#0c0e12','#13161c','#181b22','#1d2129','#242932','#313744']],
+  navy:['Midnight blue','Шөнийн хөх',['#080e1c','#0e1628','#121b31','#17213a','#1e2a45','#2a3757']],
+  black:['Black','Хар',['#000000','#0a0a0a','#111111','#171717','#1f1f1f','#2c2c2c']],
+  graphite:['Graphite grey','Саарал',['#18191b','#202124','#26272a','#2c2d31','#34353a','#424349']],
+  forest:['Forest','Ногоон',['#08110e','#0e1915','#12201b','#172722','#1e302a','#2a4038']],
+  plum:['Aubergine','Хүрэн ягаан',['#110c17','#181220','#1e1727','#241c2e','#2d2439','#3b304a']]
+};
+/* light-mode grounds, same order */
+const LIGHTBG={
+  grey:['Soft grey','Цайвар саарал',['#f3f4f7','#ffffff','#f5f6f9','#eef0f4','#e6e8ed','#d4d8e0']],
+  white:['White','Цагаан',['#ffffff','#ffffff','#f6f7f9','#f1f2f5','#e8eaee','#d6d9df']],
+  sky:['Sky blue','Цэнхэр',['#e8eef8','#f9fbff','#eef3fb','#e4ebf7','#d9e2f1','#c3cfe4']],
+  mint:['Mint','Гаа ногоон',['#e6f1ec','#fafdfb','#eef6f2','#e2efe8','#d5e6dc','#bfd6c9']],
+  sand:['Warm sand','Элсэн шар',['#f2eee6','#fffdf9','#f7f3ec','#efe9df','#e6dfd2','#d4cab8']],
+  lavender:['Lavender','Лаванда',['#eeebf6','#fcfbff','#f4f2fa','#ebe7f4','#e1dcee','#cdc6e0']],
+  blush:['Blush','Ягаавтар',['#f6eaee','#fffbfc','#faf1f4','#f3e5ea','#ecdae0','#dcc3cc']]
+};
+const DAY=864e5;
+const CIRC=2*Math.PI*112;
+
+/* ================= language ================= */
+const DOW={en:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],mn:['Да','Мя','Лх','Пү','Ба','Бя','Ня']};
+const DOWL={en:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],mn:['Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба','Ням']};
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const TYPES={en:{assignment:'Assignment',seminar:'Seminar',exam:'Exam',reading:'Reading',project:'Project',other:'Other'},
+             mn:{assignment:'Бие даалт',seminar:'Семинар',exam:'Шалгалт',reading:'Унших материал',project:'Төсөл',other:'Бусад'}};
+const KINDS={en:{uni:'University',exam:'Exam period',personal:'Personal'},mn:{uni:'Их сургууль',exam:'Шалгалтын үе',personal:'Хувийн'}};
+const CLASS_TYPES={en:{Lecture:'Lecture',Seminar:'Seminar',Lab:'Lab'},mn:{Lecture:'Лекц',Seminar:'Семинар',Lab:'Лаборатори'}};
+const PRI={en:{low:'Low',medium:'Medium',high:'High'},mn:{low:'Бага',medium:'Дунд',high:'Өндөр'}};
+const REMINDS={en:[[0,'No reminder'],[1,'1 hour before'],[3,'3 hours before'],[12,'12 hours before'],[24,'1 day before'],[48,'2 days before'],[72,'3 days before']],
+               mn:[[0,'Сануулахгүй'],[1,'1 цагийн өмнө'],[3,'3 цагийн өмнө'],[12,'12 цагийн өмнө'],[24,'1 өдрийн өмнө'],[48,'2 өдрийн өмнө'],[72,'3 өдрийн өмнө']]};
+const YEARS={en:['Not set','1st year','2nd year','3rd year','4th year','5th year or above'],mn:['Оруулаагүй','1-р курс','2-р курс','3-р курс','4-р курс','5-р курс ба түүнээс дээш']};
+const STR={
+en:{
+ 'brand':'Planner','nav.today':'Today','nav.tasks':'Tasks','nav.calendar':'Calendar','nav.timetable':'Timetable','nav.courses':'Courses','nav.focus':'Focus','nav.prefs':'Settings','nav.plan':'Plan','nav.study':'Study','nav.sections':'Sections','lang.switch':'Switch language',
+ 'greet.m':'Good morning','greet.a':'Good afternoon','greet.e':'Good evening',
+ 'sum.class1':'{n} class today','sum.classes':'{n} classes today','sum.due7':'{n} due in the next 7 days','sum.over':'{n} overdue','sum.focus':'{n} focused this week',
+ 'sum.open':'{n} open','sum.done':'{n} done','sum.clsWk':'{n} classes a week','sum.periods':'{n} periods a week','sum.courses':'{n} courses','sum.credits':'{n} credits this semester',
+ 'notice.sample':"You're looking at an example semester. Clear it when you're ready to add your own courses.",'notice.clear':'Clear examples','notice.hide':'Hide this message',
+ 'rem.due':'Due {d}','btn.open':'Open','rem.dismiss':'Dismiss reminder','rem.label':'Reminders',
+ 'today.schedule':'Schedule','today.deadlines':'Deadlines','link.timetable':'Timetable','link.allTasks':'All tasks','today.noSun':'No classes on Sunday.','today.none':'No classes today.','today.setup':'Set up your timetable','today.nothing7':'Nothing due in the next 7 days.','now':'Now',
+ 'grp.overdue':'Overdue','grp.next7':'Next 7 days','grp.today':'Today','grp.week':'This week','grp.later':'Later','grp.done':'Completed',
+ 'btn.newTask':'New task','tasks.kicker':'Assignments, seminars and exams','tasks.title':'Tasks','st.open':'To do','st.done':'Done','st.all':'All','st.label':'Status',
+ 'f.allCourses':'All courses','f.allTypes':'All types','f.byCourse':'Filter by course','f.byType':'Filter by type','tasks.noMatch':'No tasks match these filters.','tasks.none':'No tasks yet. Add your first assignment, seminar or exam.',
+ 'task.markDone':'Mark as done','task.markOpen':'Mark as not done','task.steps':'{a}/{b} steps','task.high':'High priority','task.generic':'Task',
+ 'due.today':'Today, {t}','due.tmr':'Tomorrow, {t}','due.yday':'Yesterday, {t}','due.ago':'{n} days ago',
+ 'cal.kicker':'Deadlines, exams and university dates','cal.title':'Calendar','btn.newEvent':'New event','cal.prev':'Previous month','cal.next':'Next month','cal.today':'Today','cal.more':'+{n} more','cal.dueN':'{n} due',
+ 'btn.task':'Task','btn.event':'Event','cal.events':'Events','cal.due':'Due','cal.classes':'Classes','cal.nothing':'Nothing due this day.',
+ 'tt.kicker':'Weekly class schedule','tt.title':'Timetable','btn.addClass':'Add class','tt.needCourses':'Add your courses first, then place their lectures and seminars here.','tt.goCourses':'Go to courses','tt.hint':'Select an empty slot to add a class there. A class can cover several periods.','tt.period':'Period','tt.lunch':'Lunch break','tt.addAt':'Add class on {d}, period {p}',
+ 'per.one':'Period {a}','per.range':'Periods {a}–{b}',
+ 'courses.kicker':'Course information','courses.title':'Courses','btn.addCourse':'Add course','th.course':'Course','th.instr':'Instructor','th.room':'Room','th.cls':'Classes / wk','th.open':'Open tasks','th.credits':'Credits','notSet':'Not set','cr':'{n} cr','openTasks':'{n} open tasks',
+ 'courses.none':'No courses yet. Add each course with its code, instructor and room so tasks and classes can link to it.',
+ 'focus.kicker':'Pomodoro study timer','focus.title':'Focus','mode.work':'Focus','mode.short':'Short break','mode.long':'Long break','mode.label':'Timer mode','minShort':'{n}m',
+ 'focus.round':'Round {i} of {n}','btn.start':'Start','btn.pause':'Pause','btn.resume':'Resume','btn.reset':'Reset','btn.skip':'Skip',
+ 'focus.for':'Studying for','focus.general':'General study','focus.generalShort':'General','focus.task':'Task','focus.noTask':'No specific task','focus.hint':'A chime plays when time is up. Finished focus rounds are logged automatically.','focus.last7':'Last 7 days','focus.none':'No focus sessions this week yet.','focus.recent':'Recent sessions',
+ 'toast.roundsDone':'Round set finished. Take a long break.','toast.round':'Focus round logged. Take a short break.','toast.breakOver':'Break is over. Ready for the next round?',
+ 'prefs.kicker':'Personalize your planner','prefs.title':'Settings','sec.profile':'Profile','sec.appearance':'Language and appearance','sec.semester':'Semester','sec.focus':'Focus timer','sec.data':'Data',
+ 'pf.name':'Name','pf.nameD':'Shown in your greeting on the Today page.','pf.namePh':'Your first name','pf.year':'Year of study','pf.program':'Program','pf.programPh':'e.g. Accounting',
+ 'pf.lang':'Language','pf.langD':'Everything in the planner, including the example semester.','pf.accent':'Accent colour','pf.accentD':'Used for buttons, links, today’s date and the focus timer. The last circle opens a picker for any colour.','pf.customPick':'Choose a custom colour','pf.custom':'Custom',
+ 'pf.theme':'Theme','theme.system':'Match device','theme.light':'Light','theme.dark':'Dark','pf.darkBg':'Dark mode background','pf.darkBgD':'The background used whenever the planner is in dark mode.','pf.lightBg':'Light mode background','pf.lightBgD':'The background used whenever the planner is in light mode.','disclaimer':'Student project · not an official UFE app',
+ 'app.name':'UFE Planner','sec.notify':'Reminders and notifications','pf.sound':'Reminder sound','pf.soundD':'Plays a short chime when a reminder comes up while the planner is open.','on':'On','off':'Off','btn.test':'Play test sound',
+ 'pf.notif':'Browser notifications','pf.notifD':'Shows a system notification for reminders and finished focus rounds, even when the planner is in a background tab. The planner has to be open somewhere.',
+ 'notif.enable':'Turn on','notif.off':'Turn off','notif.test':'Send test','notif.on':'On. You’ll get a notification when a reminder is due.','notif.denied':'Blocked. Allow notifications for this site in your browser settings, then reload.','notif.unsupported':'Not available in this view. Open the planner from its own website to use notifications.',
+ 'notif.title':'UFE Planner reminder','notif.body':'{t} is due {d}','notif.sample':'This is how your reminders will look.','toast.notifOn':'Notifications are on',
+ 'pf.semStart':'First day of semester','pf.semStartD':'Used to show the current teaching week.','pf.semLen':'Semester length','pf.remind':'Default reminder','pf.remindD':'Applied to each new task. You can change it per task.',
+ 'pf.work':'Focus round','pf.short':'Short break','pf.long':'Long break','pf.rounds':'Long break after','u.min':'minutes','u.weeks':'weeks','u.rounds':'rounds',
+ 'pf.backup':'Backup','pf.backupD':'Your planner is saved in this browser only. Copy a backup to move it to another device.','btn.copyBackup':'Copy backup','backupText':'Backup text',
+ 'pf.restore':'Restore','pf.restoreD':'Paste a backup to replace everything in this planner.','pf.restorePh':'Paste backup text here','btn.restore':'Restore','pf.reset':'Start over','btn.loadSample':'Load example semester','btn.clear':'Clear courses and tasks',
+ 'arm.delete':'Tap again to delete','arm.clear':'Tap again to clear','arm.replace':'Tap again to replace',
+ 'toast.saved':'Saved','toast.accent':'Accent colour saved','toast.cleared':'Cleared. Start by adding your courses.','toast.sample':'Example semester loaded','toast.copied':'Backup copied. Paste it somewhere safe.','toast.select':'Select all and copy the text in the box','toast.restored':'Planner restored','toast.badBackup':'That text is not a planner backup. Paste the full text from Copy backup.',
+ 'toast.markedDone':'Marked done','toast.taskAdded':'Task added','toast.taskSaved':'Task saved','toast.taskDeleted':'Task deleted','toast.classAdded':'Class added','toast.classSaved':'Class saved','toast.classRemoved':'Class removed',
+ 'toast.eventAdded':'Event added','toast.eventSaved':'Event saved','toast.eventDeleted':'Event deleted','toast.courseAdded':'Course added','toast.courseSaved':'Course saved','toast.courseDeleted':'Course deleted',
+ 'toast.needCourse':'Add a course first, then its classes','toast.clash':'{c} is already on {d}, {r}','toast.endBefore':'The end date must be on or after the start date','toast.periodOrder':'The last period can’t be before the first','toast.reminder':'Reminder: {t} is due {d}',
+ 'm.newTask':'New task','m.editTask':'Edit task','f.title':'Title','f.titlePh':'e.g. Seminar 8 report','f.course':'Course','f.noCourse':'No course','f.type':'Type','f.dueDate':'Due date','f.time':'Time','f.priority':'Priority','f.reminder':'Reminder',
+ 'f.steps':'Steps','btn.addStep':'Add step','f.step':'Step','f.stepDone':'Step done','f.removeStep':'Remove step','f.notes':'Notes','m.focusTask':'Start a focus session on this task',
+ 'btn.delete':'Delete','btn.cancel':'Cancel','btn.save':'Save','btn.close':'Close',
+ 'm.addClass':'Add class','m.editClass':'Edit class','f.day':'Day','f.from':'First period','f.to':'Last period','f.classType':'Class type','f.room':'Room','f.roomPh':'e.g. C-605',
+ 'm.newEvent':'New event','m.editEvent':'Edit event','f.eventPh':'e.g. Final exam period','f.starts':'Starts','f.ends':'Ends (optional)','f.kind':'Kind',
+ 'm.addCourse':'Add course','m.editCourse':'Edit {c}','f.code':'Course code','f.credits':'Credits','f.cname':'Course name','f.cnamePh':'Principles of Marketing','f.instr':'Instructor','f.croom':'Main room','f.ccolor':'Course colour','f.colorN':'Colour {n}','f.cnotesPh':'Grading, office hours, team info',
+ 'm.addTaskCourse':'Add a task for this course','m.addClassCourse':'Add a class','m.courseDelHint':'Deleting a course also removes its timetable classes. Its tasks stay, without a course.',
+ 'sem.before':'Before semester','sem.done':'Semester finished','sem.week':'Week {n} of {w}','attn':'{n} need attention'
+},
+mn:{
+ 'brand':'Төлөвлөгч','nav.today':'Өнөөдөр','nav.tasks':'Даалгавар','nav.calendar':'Хуанли','nav.timetable':'Хуваарь','nav.courses':'Хичээлүүд','nav.focus':'Төвлөрөл','nav.prefs':'Тохиргоо','nav.plan':'Төлөвлөгөө','nav.study':'Суралцах','nav.sections':'Цэс','lang.switch':'Хэл солих',
+ 'greet.m':'Өглөөний мэнд','greet.a':'Өдрийн мэнд','greet.e':'Оройн мэнд',
+ 'sum.class1':'Өнөөдөр {n} хичээл','sum.classes':'Өнөөдөр {n} хичээл','sum.due7':'Ойрын 7 хоногт {n} даалгавар','sum.over':'Хугацаа хэтэрсэн {n}','sum.focus':'Энэ долоо хоногт {n} төвлөрсөн',
+ 'sum.open':'Хийх {n}','sum.done':'Дууссан {n}','sum.clsWk':'Долоо хоногт {n} хичээл','sum.periods':'Нийт {n} пар','sum.courses':'{n} хичээл','sum.credits':'Энэ улиралд {n} кредит',
+ 'notice.sample':'Энэ бол жишээ улирал. Өөрийн хичээлүүдээ оруулахад бэлэн болмогц цэвэрлээрэй.','notice.clear':'Жишээг цэвэрлэх','notice.hide':'Энэ мэдэгдлийг нуух',
+ 'rem.due':'Хугацаа: {d}','btn.open':'Нээх','rem.dismiss':'Сануулгыг хаах','rem.label':'Сануулга',
+ 'today.schedule':'Өнөөдрийн хуваарь','today.deadlines':'Дуусах хугацаа','link.timetable':'Хуваарь','link.allTasks':'Бүх даалгавар','today.noSun':'Ням гарагт хичээлгүй.','today.none':'Өнөөдөр хичээлгүй.','today.setup':'Хуваариа оруулах','today.nothing7':'Ойрын 7 хоногт дуусах даалгавар алга.','now':'Одоо',
+ 'grp.overdue':'Хугацаа хэтэрсэн','grp.next7':'Ойрын 7 хоног','grp.today':'Өнөөдөр','grp.week':'Энэ долоо хоног','grp.later':'Дараа нь','grp.done':'Дууссан',
+ 'btn.newTask':'Шинэ даалгавар','tasks.kicker':'Бие даалт, семинар, шалгалт','tasks.title':'Даалгавар','st.open':'Хийх','st.done':'Дууссан','st.all':'Бүгд','st.label':'Төлөв',
+ 'f.allCourses':'Бүх хичээл','f.allTypes':'Бүх төрөл','f.byCourse':'Хичээлээр шүүх','f.byType':'Төрлөөр шүүх','tasks.noMatch':'Шүүлтүүрт тохирох даалгавар алга.','tasks.none':'Даалгавар алга байна. Эхний бие даалт, семинар эсвэл шалгалтаа нэмээрэй.',
+ 'task.markDone':'Дууссан гэж тэмдэглэх','task.markOpen':'Дуусаагүй болгох','task.steps':'{a}/{b} алхам','task.high':'Чухал','task.generic':'Даалгавар',
+ 'due.today':'Өнөөдөр, {t}','due.tmr':'Маргааш, {t}','due.yday':'Өчигдөр, {t}','due.ago':'{n} өдрийн өмнө',
+ 'cal.kicker':'Дуусах хугацаа, шалгалт, сургуулийн чухал өдрүүд','cal.title':'Хуанли','btn.newEvent':'Шинэ үйл явдал','cal.prev':'Өмнөх сар','cal.next':'Дараах сар','cal.today':'Өнөөдөр','cal.more':'+{n} бусад','cal.dueN':'{n} даалгавар',
+ 'btn.task':'Даалгавар','btn.event':'Үйл явдал','cal.events':'Үйл явдал','cal.due':'Дуусах','cal.classes':'Хичээл','cal.nothing':'Энэ өдөр дуусах даалгавар алга.',
+ 'tt.kicker':'Долоо хоногийн хичээлийн хуваарь','tt.title':'Хичээлийн хуваарь','btn.addClass':'Хуваарь нэмэх','tt.needCourses':'Эхлээд хичээлүүдээ нэмээд, дараа нь лекц, семинараа энд байрлуулна.','tt.goCourses':'Хичээлүүд рүү','tt.hint':'Хоосон нүдэн дээр дарж хичээл нэмнэ. Нэг хичээл хэд хэдэн пар үргэлжилж болно.','tt.period':'Пар','tt.lunch':'Цайны завсарлага','tt.addAt':'{d}, {p}-р пар-д хичээл нэмэх',
+ 'per.one':'{a}-р пар','per.range':'{a}–{b} пар',
+ 'courses.kicker':'Хичээлийн мэдээлэл','courses.title':'Хичээлүүд','btn.addCourse':'Хичээл нэмэх','th.course':'Хичээл','th.instr':'Багш','th.room':'Өрөө','th.cls':'Долоо хоногт','th.open':'Хийх даалгавар','th.credits':'Кредит','notSet':'Оруулаагүй','cr':'{n} кр','openTasks':'{n} хийх даалгавар',
+ 'courses.none':'Хичээл алга байна. Хичээл бүрийн код, багш, өрөөг оруулбал даалгавар, хуваарьтай холбогдоно.',
+ 'focus.kicker':'Помодоро цаг хэмжигч','focus.title':'Төвлөрөл','mode.work':'Төвлөрөх','mode.short':'Богино завсарлага','mode.long':'Урт завсарлага','mode.label':'Горим','minShort':'{n}мин',
+ 'focus.round':'{i}/{n} үе','btn.start':'Эхлэх','btn.pause':'Түр зогсоох','btn.resume':'Үргэлжлүүлэх','btn.reset':'Эхнээс','btn.skip':'Алгасах',
+ 'focus.for':'Хичээл','focus.general':'Ерөнхий давтлага','focus.generalShort':'Ерөнхий','focus.task':'Даалгавар','focus.noTask':'Тодорхой даалгаваргүй','focus.hint':'Хугацаа дуусахад дохио дуугарна. Дууссан үе бүр автоматаар бүртгэгдэнэ.','focus.last7':'Сүүлийн 7 хоног','focus.none':'Энэ долоо хоногт төвлөрсөн цаг бүртгэгдээгүй байна.','focus.recent':'Сүүлийн бүртгэл',
+ 'toast.roundsDone':'Бүх үе дууслаа. Урт завсарлага аваарай.','toast.round':'Үе бүртгэгдлээ. Богино завсарлага аваарай.','toast.breakOver':'Завсарлага дууслаа. Дараагийн үедээ бэлэн үү?',
+ 'prefs.kicker':'Төлөвлөгчөө өөртөө тааруулах','prefs.title':'Тохиргоо','sec.profile':'Хувийн мэдээлэл','sec.appearance':'Хэл ба харагдах байдал','sec.semester':'Улирал','sec.focus':'Төвлөрлийн цаг','sec.data':'Өгөгдөл',
+ 'pf.name':'Нэр','pf.nameD':'«Өнөөдөр» хуудасны мэндчилгээнд харагдана.','pf.namePh':'Таны нэр','pf.year':'Курс','pf.program':'Мэргэжил','pf.programPh':'ж.нь: Нягтлан бодох бүртгэл',
+ 'pf.lang':'Хэл','pf.langD':'Жишээ улирал зэрэг төлөвлөгчийн бүх хэсэгт хамаарна.','pf.accent':'Үндсэн өнгө','pf.accentD':'Товч, холбоос, өнөөдрийн огноо, цаг хэмжигчид хэрэглэгдэнэ. Сүүлийн дугуй дээр дарж дурын өнгө сонгоно.','pf.customPick':'Өөрийн өнгө сонгох','pf.custom':'Өөрийн',
+ 'pf.theme':'Горим','theme.system':'Төхөөрөмжийн дагуу','theme.light':'Цайвар','theme.dark':'Бараан','pf.darkBg':'Бараан горимын дэвсгэр','pf.darkBgD':'Бараан горимд ашиглагдах дэвсгэр өнгө.','pf.lightBg':'Цайвар горимын дэвсгэр','pf.lightBgD':'Цайвар горимд ашиглагдах дэвсгэр өнгө.','disclaimer':'Оюутны төсөл · UFE-ийн албан ёсны апп биш',
+ 'app.name':'UFE Төлөвлөгч','sec.notify':'Сануулга ба мэдэгдэл','pf.sound':'Сануулгын дуу','pf.soundD':'Төлөвлөгч нээлттэй үед сануулга ирэхэд богино дохио дуугарна.','on':'Асаалттай','off':'Унтраалттай','btn.test':'Дуу шалгах',
+ 'pf.notif':'Хөтчийн мэдэгдэл','pf.notifD':'Төлөвлөгч арын цонхонд нээлттэй байсан ч сануулга болон дууссан төвлөрлийн үеийг системийн мэдэгдлээр харуулна. Төлөвлөгч хаа нэгтээ нээлттэй байх шаардлагатай.',
+ 'notif.enable':'Асаах','notif.off':'Унтраах','notif.test':'Туршилт илгээх','notif.on':'Асаалттай. Сануулгын хугацаа болоход мэдэгдэл ирнэ.','notif.denied':'Хаалттай байна. Хөтчийн тохиргооноос энэ сайтад мэдэгдэл зөвшөөрөөд, хуудсаа дахин ачаална уу.','notif.unsupported':'Энэ хэлбэрээр ажиллахгүй. Мэдэгдэл ашиглахын тулд төлөвлөгчийг өөрийн вэбсайтаас нээнэ үү.',
+ 'notif.title':'UFE Төлөвлөгч — сануулга','notif.body':'{t} — {d}','notif.sample':'Таны сануулга ингэж харагдана.','toast.notifOn':'Мэдэгдэл асаалаа',
+ 'pf.semStart':'Улирлын эхний өдөр','pf.semStartD':'Хэддүгээр долоо хоног болохыг тооцоход ашиглана.','pf.semLen':'Улирлын үргэлжлэх хугацаа','pf.remind':'Үндсэн сануулга','pf.remindD':'Шинэ даалгавар бүрт хэрэглэгдэнэ. Даалгавар тус бүр дээр өөрчилж болно.',
+ 'pf.work':'Төвлөрөх хугацаа','pf.short':'Богино завсарлага','pf.long':'Урт завсарлага','pf.rounds':'Урт завсарлага авах','u.min':'минут','u.weeks':'долоо хоног','u.rounds':'үеийн дараа',
+ 'pf.backup':'Нөөц','pf.backupD':'Таны мэдээлэл зөвхөн энэ хөтөч дээр хадгалагдана. Өөр төхөөрөмж рүү шилжүүлэхдээ нөөцөө хуулна уу.','btn.copyBackup':'Нөөц хуулах','backupText':'Нөөц текст',
+ 'pf.restore':'Сэргээх','pf.restoreD':'Нөөцөө буулгаж төлөвлөгчийн бүх мэдээллийг солино.','pf.restorePh':'Нөөц текстээ энд буулгана уу','btn.restore':'Сэргээх','pf.reset':'Шинээр эхлэх','btn.loadSample':'Жишээ улирал ачаалах','btn.clear':'Хичээл, даалгаврыг устгах',
+ 'arm.delete':'Устгах бол дахин дарна уу','arm.clear':'Цэвэрлэх бол дахин дарна уу','arm.replace':'Солих бол дахин дарна уу',
+ 'toast.saved':'Хадгаллаа','toast.accent':'Өнгө хадгалагдлаа','toast.cleared':'Цэвэрлэлээ. Хичээлүүдээ нэмээд эхлээрэй.','toast.sample':'Жишээ улирал ачааллаа','toast.copied':'Нөөц хуулагдлаа. Аюулгүй газар хадгалаарай.','toast.select':'Хайрцаг доторх текстийг бүгдийг нь сонгож хуулна уу','toast.restored':'Төлөвлөгч сэргээгдлээ','toast.badBackup':'Энэ текст нөөц биш байна. «Нөөц хуулах»-аар авсан текстийг бүтнээр нь буулгана уу.',
+ 'toast.markedDone':'Дууссан гэж тэмдэглэлээ','toast.taskAdded':'Даалгавар нэмэгдлээ','toast.taskSaved':'Даалгавар хадгалагдлаа','toast.taskDeleted':'Даалгавар устлаа','toast.classAdded':'Хуваарьт нэмэгдлээ','toast.classSaved':'Хуваарь хадгалагдлаа','toast.classRemoved':'Хуваариас хасагдлаа',
+ 'toast.eventAdded':'Үйл явдал нэмэгдлээ','toast.eventSaved':'Үйл явдал хадгалагдлаа','toast.eventDeleted':'Үйл явдал устлаа','toast.courseAdded':'Хичээл нэмэгдлээ','toast.courseSaved':'Хичээл хадгалагдлаа','toast.courseDeleted':'Хичээл устлаа',
+ 'toast.needCourse':'Эхлээд хичээлээ нэмнэ үү','toast.clash':'{d} гарагийн {r}-д {c} хичээл байна','toast.endBefore':'Дуусах огноо эхлэх огнооноос өмнө байж болохгүй','toast.periodOrder':'Төгсөх пар эхлэх параас өмнө байж болохгүй','toast.reminder':'Сануулга: {t} — {d}',
+ 'm.newTask':'Шинэ даалгавар','m.editTask':'Даалгавар засах','f.title':'Гарчиг','f.titlePh':'ж.нь: 8-р семинарын тайлан','f.course':'Хичээл','f.noCourse':'Хичээлгүй','f.type':'Төрөл','f.dueDate':'Дуусах огноо','f.time':'Цаг','f.priority':'Ач холбогдол','f.reminder':'Сануулга',
+ 'f.steps':'Алхмууд','btn.addStep':'Алхам нэмэх','f.step':'Алхам','f.stepDone':'Алхам дууссан','f.removeStep':'Алхам хасах','f.notes':'Тэмдэглэл','m.focusTask':'Энэ даалгавар дээр төвлөрч эхлэх',
+ 'btn.delete':'Устгах','btn.cancel':'Болих','btn.save':'Хадгалах','btn.close':'Хаах',
+ 'm.addClass':'Хуваарь нэмэх','m.editClass':'Хуваарь засах','f.day':'Гараг','f.from':'Эхлэх пар','f.to':'Төгсөх пар','f.classType':'Хичээлийн хэлбэр','f.room':'Өрөө','f.roomPh':'ж.нь: C-605',
+ 'm.newEvent':'Шинэ үйл явдал','m.editEvent':'Үйл явдал засах','f.eventPh':'ж.нь: Улирлын шалгалтын үе','f.starts':'Эхлэх','f.ends':'Дуусах (заавал биш)','f.kind':'Төрөл',
+ 'm.addCourse':'Хичээл нэмэх','m.editCourse':'{c} засах','f.code':'Хичээлийн код','f.credits':'Кредит','f.cname':'Хичээлийн нэр','f.cnamePh':'Маркетингийн үндэс','f.instr':'Багш','f.croom':'Үндсэн өрөө','f.ccolor':'Хичээлийн өнгө','f.colorN':'{n}-р өнгө','f.cnotesPh':'Дүгнэх журам, зөвлөх цаг, багийн мэдээлэл',
+ 'm.addTaskCourse':'Энэ хичээлд даалгавар нэмэх','m.addClassCourse':'Хуваарь нэмэх','m.courseDelHint':'Хичээлийг устгавал хуваарь нь хамт устна. Даалгаврууд нь хичээлгүйгээр үлдэнэ.',
+ 'sem.before':'Улирал эхлээгүй','sem.done':'Улирал дууссан','sem.week':'{n}-р долоо хоног','attn':'{n} анхаарах зүйл'
+}};
+let L='en';
+const t=(k,v)=>{let s=STR[L][k]??STR.en[k]??k;if(v)s=s.replace(/\{(\w+)\}/g,(_,x)=>v[x]??'');return s};
+const tb=(k,n)=>t(k,{n:`<b>${n}</b>`});
+const LI=()=>L==='mn'?1:0;
+
+/* ================= helpers ================= */
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,10);
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseYMD=s=>{const [y,m,d]=String(s).split('-').map(Number);return new Date(y,(m||1)-1,d||1)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const startOfDay=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate());
+const dowMon=d=>(d.getDay()+6)%7;
+const atTime=(d,hm)=>{const [h,m]=hm.split(':').map(Number);return new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,m)};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtLong=d=>L==='mn'?`${d.getMonth()+1}-р сарын ${d.getDate()}, ${DOWL.mn[dowMon(d)]} гараг`:`${DOWL.en[dowMon(d)]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+const monthYear=d=>L==='mn'?`${d.getFullYear()} оны ${d.getMonth()+1}-р сар`:`${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+const shortDate=s=>{const d=parseYMD(s);return L==='mn'?`${pad(d.getMonth()+1)}.${pad(d.getDate())}`:`${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}`};
+const fmtMin=m=>L==='mn'?(m<60?`${m} мин`:`${Math.floor(m/60)} ц ${pad(m%60)} мин`):(m<60?`${m} min`:`${Math.floor(m/60)}h ${pad(m%60)}m`);
+const mmss=sec=>{const s=Math.max(0,Math.ceil(sec));return `${pad(Math.floor(s/60))}:${pad(s%60)}`};
+const byDue=(a,b)=>a.due.localeCompare(b.due);
+const course=id=>S.courses.find(c=>c.id===id);
+const task=id=>S.tasks.find(x=>x.id===id);
+const cc=c=>c?COLORS[(c.color||0)%COLORS.length]:'var(--faint)';
+const typeName=k=>TYPES[L][k]||t('task.generic');
+const ctName=k=>CLASS_TYPES[L][k]||k;
+const clsEnd=cl=>cl.p+(cl.len||1)-1;
+const clsTime=cl=>`${PERIODS[cl.p][0]}–${PERIODS[clsEnd(cl)][1]}`;
+const clsPer=cl=>(cl.len||1)>1?t('per.range',{a:cl.p+1,b:clsEnd(cl)+1}):t('per.one',{a:cl.p+1});
+
+/* ================= accent colour math ================= */
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return [n>>16&255,n>>8&255,n&255]}
+function rgbToHsl([r,g,b]){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2;let h=0,s=0;
+  if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;h/=6}return [h,s,l]}
+function hslToRgb(h,s,l){if(!s){const v=Math.round(l*255);return [v,v,v]}const q=l<.5?l*(1+s):l+s-l*s,pp=2*l-q;
+  const f=x=>{if(x<0)x+=1;if(x>1)x-=1;return x<1/6?pp+(q-pp)*6*x:x<1/2?q:x<2/3?pp+(q-pp)*(2/3-x)*6:pp};
+  return [f(h+1/3),f(h),f(h-1/3)].map(v=>Math.round(v*255))}
+const toHex=rgb=>'#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');
+function lum(rgb){const a=rgb.map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*a[0]+.7152*a[1]+.0722*a[2]}
+const contrast=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+/* Any chosen colour becomes a readable pair: a deep version for light mode, a soft version for the chosen dark ground */
+function deriveAccent(hex,ground=groundRgb(),lg=lightRgb()){
+  const [h,s,l]=rgbToHsl(hexToRgb(hex));
+  let Lw=Math.min(l,.5), a=hslToRgb(h,s,Lw);
+  while(contrast(a,lg)<4.8&&Lw>.04){Lw-=.01;a=hslToRgb(h,s,Lw)}
+  const S2=Math.min(s,.78);let D=Math.max(l,.6), b=hslToRgb(h,S2,D);
+  while(contrast(b,ground)<6.2&&D<.95){D+=.01;b=hslToRgb(h,S2,D)}
+  return [toHex(a),toHex(b)];
+}
+const validHex=v=>/^#[0-9a-f]{6}$/i.test(v||'');
+
+/* ================= sample semester (bilingual) ================= */
+const SAMPLE={
+  courses:[
+    {sk:'c1',code:'MKT221',name:['Principles of Marketing','Маркетингийн үндэс'],instructor:'З.Амина',room:'C-605',credits:3,color:0,notes:['Team 3 · weekly seminar reports','3-р баг · долоо хоног бүрийн семинарын тайлан']},
+    {sk:'c2',code:'DBP221',name:['Fundamentals of Data Analysis (Python)','Өгөгдлийн шинжилгээний үндэс (Python)'],instructor:'',room:'C-202',credits:3,color:1,notes:['Seminars submitted as .py files','Семинарын ажлыг .py файлаар илгээнэ']},
+    {sk:'c3',code:'ECON201',name:['Microeconomics','Микро эдийн засаг'],instructor:'',room:'C-802',credits:3,color:2,notes:['','']},
+    {sk:'c4',code:'ACC201',name:['Financial Accounting','Санхүүгийн нягтлан бодох бүртгэл'],instructor:'',room:'C-801',credits:3,color:3,notes:['','']},
+    {sk:'c5',code:'ENG202',name:['Academic English','Академик англи хэл'],instructor:'',room:'C-505',credits:2,color:4,notes:['','']}
+  ],
+  /* [courseId, day (0=Mon), first period index, number of periods, type, room] */
+  classes:[['c3',0,0,3,'Lecture','C-802'],['c5',0,10,1,'Seminar','C-505'],['c4',1,3,3,'Lecture','C-801'],['c3',1,8,2,'Seminar','C-507'],
+    ['c1',2,3,3,'Seminar','C-605'],['c1',2,6,2,'Lecture','C-605'],['c2',3,6,3,'Lab','C-202'],['c5',3,10,2,'Seminar','C-505'],['c4',4,1,2,'Seminar','C-405']],
+  tasks:[
+    {sk:'t1',title:['Seminar 8: survey results report','8-р семинар: судалгааны үр дүнгийн тайлан'],courseId:'c1',type:'seminar',o:5,priority:'high',notes:['Google Forms survey, target 100–150 responses','Google Forms судалгаа, 100–150 хариулт цуглуулах'],
+      subs:[['Finalize questionnaire','Асуулгыг эцэслэх',1],['Share form in class chats','Ангийн чатад судалгаагаа түгээх'],['Clean responses in Excel','Хариултуудыг Excel-д цэгцлэх'],['Write findings and submit PDF','Дүгнэлт бичиж PDF-ээр илгээх']]},
+    {sk:'t2',title:['Seminar 8 exercises (.py)','8-р семинарын дасгал (.py)'],courseId:'c2',type:'seminar',o:2,priority:'high',subs:[['groupby and agg exercises','groupby, agg дасгалууд',1],['Merge two DataFrames','Хоёр DataFrame нэгтгэх'],['Run the script and check output','Скриптээ ажиллуулж үр дүнг шалгах']]},
+    {sk:'t3',title:['Midterm exam','Явцын шалгалт'],courseId:'c3',type:'exam',o:8,h:'07:40',priority:'high',remind:48,subs:[['Review chapters 1–3','1–3-р бүлгийг давтах'],['Review chapters 4–6','4–6-р бүлгийг давтах'],['Past-paper practice','Өмнөх жилийн материалаар бэлдэх']]},
+    {sk:'t4',title:['Chapter 5 problems','5-р бүлгийн бодлого'],courseId:'c4',o:0},
+    {sk:'t5',title:['Journal entries worksheet','Ажил гүйлгээний бичилтийн дасгал'],courseId:'c4',o:-1,h:'18:00'},
+    {sk:'t6',title:['Argumentative essay outline','Нотолгоот эссэгийн төлөвлөгөө'],courseId:'c5',type:'project',o:11,priority:'low'},
+    {sk:'t7',title:['Read Ch. 4: Managing marketing information','4-р бүлэг унших: Маркетингийн мэдээллийн удирдлага'],courseId:'c1',type:'reading',o:-2,h:'10:00',done:true},
+    {sk:'t8',title:['Print questionnaire copies for team','Багт асуулгын хуудас хэвлэх'],type:'other',o:3,h:'17:00',priority:'low',remind:0}
+  ],
+  events:[
+    {sk:'e1',title:['Midterm exam period','Явцын шалгалтын үе'],o:7,end:12,kind:'exam'},
+    {sk:'e2',title:['Team survey fieldwork','Багийн судалгааны ажил'],o:1,end:4,kind:'personal'},
+    {sk:'e3',title:['Spring course registration opens','Хаврын хичээл сонголт эхэлнэ'],o:20,kind:'uni'}
+  ]
+};
+function sampleClasses(){return SAMPLE.classes.map(([courseId,day,pp,len,type,room])=>({id:uid(),courseId,day,p:pp,len,type,room}))}
+function seed(lang){
+  const i=lang==='mn'?1:0, s=defaults(), td=startOfDay(new Date());
+  const d=o=>ymd(addDays(td,o));
+  s.courses=SAMPLE.courses.map(c=>({id:c.sk,sk:c.sk,code:c.code,name:c.name[i],instructor:c.instructor,room:c.room,credits:c.credits,color:c.color,notes:c.notes[i]}));
+  s.classes=sampleClasses();
+  s.tasks=SAMPLE.tasks.map(x=>({id:uid(),sk:x.sk,title:x.title[i],courseId:x.courseId||'',type:x.type||'assignment',due:`${d(x.o)}T${x.h||'23:59'}`,priority:x.priority||'medium',remind:x.remind??24,done:!!x.done,notes:x.notes?x.notes[i]:'',subtasks:(x.subs||[]).map(sb=>({id:uid(),text:sb[i],done:!!sb[2]}))}));
+  s.events=SAMPLE.events.map(e=>({id:uid(),sk:e.sk,title:e.title[i],date:d(e.o),end:e.end?d(e.end):'',kind:e.kind}));
+  s.sessions=[[-1,'c2'],[-1,'c2'],[-2,'c1'],[-3,'c3'],[-3,'c3'],[-4,'c4']].map(([o,c])=>({id:uid(),date:d(o),at:'',minutes:25,courseId:c,taskId:''}));
+  s.isSample=true;
+  return s;
+}
+/* swap untouched sample text when the language changes */
+function translateSample(from,to){
+  const fi=from==='mn'?1:0, ti=to==='mn'?1:0;
+  const sw=(o,f,pair)=>{if(pair&&o[f]===pair[fi])o[f]=pair[ti]};
+  S.courses.forEach(c=>{const d=SAMPLE.courses.find(x=>x.sk===c.sk);if(d){sw(c,'name',d.name);sw(c,'notes',d.notes)}});
+  S.tasks.forEach(x=>{const d=SAMPLE.tasks.find(y=>y.sk===x.sk);if(!d)return;sw(x,'title',d.title);sw(x,'notes',d.notes);(x.subtasks||[]).forEach((sb,j)=>{if(d.subs&&d.subs[j])sw(sb,'text',d.subs[j])})});
+  S.events.forEach(e=>{const d=SAMPLE.events.find(y=>y.sk===e.sk);if(d)sw(e,'title',d.title)});
+}
+
+/* ================= state ================= */
+function defaults(){return {ver:2,profile:{name:'',year:'',program:'',lang:'',accent:'navy',customColor:'',theme:'system',darkBg:'charcoal',lightBg:'grey',sound:true,notify:false,remindLead:24,pomo:{work:25,short:5,long:15,rounds:4},semStart:'2026-09-01',semWeeks:16},courses:[],classes:[],tasks:[],events:[],sessions:[],dismissed:[],isSample:false,bannerHidden:false}}
+const browserLang=()=>/^mn/i.test(navigator.language||'')?'mn':'en';
+function normalize(s){
+  const d=defaults();
+  s.profile=Object.assign(d.profile,s.profile||{});
+  s.profile.pomo=Object.assign(defaults().profile.pomo,s.profile.pomo||{});
+  if(!ACCENTS[s.profile.accent]&&!(s.profile.accent==='custom'&&validHex(s.profile.customColor)))s.profile.accent='navy';
+  if(!DARKBG[s.profile.darkBg])s.profile.darkBg='charcoal';
+  if(!LIGHTBG[s.profile.lightBg])s.profile.lightBg='grey';
+  if(s.profile.lang!=='en'&&s.profile.lang!=='mn')s.profile.lang=browserLang();
+  ['courses','classes','tasks','events','sessions','dismissed'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=[]});
+  s.tasks.forEach(x=>{if(!Array.isArray(x.subtasks))x.subtasks=[]});
+  if(!(s.ver>=2)){
+    /* earlier versions used six 90-minute blocks; move them onto UFE's 50-minute periods */
+    const OLD=[[0,2],[2,2],[4,2],[6,2],[7,2],[9,2]];
+    if(s.isSample)s.classes=sampleClasses();
+    else s.classes.forEach(c=>{if(!c.len){const m=OLD[c.p]||[0,1];c.p=m[0];c.len=m[1]}});
+    s.ver=2;
+  }
+  s.classes.forEach(c=>{c.p=Math.max(0,Math.min(11,+c.p||0));c.len=Math.max(1,Math.min(12-c.p,+c.len||1))});
+  return s;
+}
+function load(){let s=null;try{const r=localStorage.getItem(KEY);if(r)s=JSON.parse(r)}catch(e){}
+  if(!s||!Array.isArray(s.tasks)){const lang=browserLang();s=seed(lang);s.profile.lang=lang}
+  return normalize(s)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+let S=load();
+L=S.profile.lang;
+
+/* ================= theme ================= */
+const hostTheme=document.documentElement.getAttribute('data-theme');
+const groundRgb=()=>hexToRgb((DARKBG[S.profile.darkBg]||DARKBG.charcoal)[2][1]);
+const lightRgb=()=>hexToRgb((LIGHTBG[S.profile.lightBg]||LIGHTBG.grey)[2][1]);
+let DER={};
+function computeDer(){const g=groundRgb();DER={};Object.entries(ACCENTS).forEach(([k,v])=>{DER[k]=deriveAccent(v[2],g)})}
+function accentPair(){const q=S.profile;if(q.accent==='custom'&&validHex(q.customColor))return deriveAccent(q.customColor,groundRgb());return DER[q.accent]||DER.navy}
+function accentName(){const q=S.profile;return q.accent==='custom'&&validHex(q.customColor)?`${t('pf.custom')} · ${q.customColor.toUpperCase()}`:(ACCENTS[q.accent]||ACCENTS.navy)[LI()]}
+function applyTheme(){
+  const r=document.documentElement, th=S.profile.theme;
+  if(th==='light'||th==='dark')r.setAttribute('data-theme',th);
+  else if(hostTheme)r.setAttribute('data-theme',hostTheme);else r.removeAttribute('data-theme');
+  const g=(DARKBG[S.profile.darkBg]||DARKBG.charcoal)[2];
+  const lg=(LIGHTBG[S.profile.lightBg]||LIGHTBG.grey)[2];
+  ['bg','canvas','sunken','hover','line','line-strong'].forEach((k,i)=>{r.style.setProperty('--d-'+k,g[i]);r.style.setProperty('--l-'+k,lg[i])});
+  computeDer();
+  const [l,d]=accentPair();
+  r.style.setProperty('--accent-l',l);r.style.setProperty('--accent-d',d);
+  r.lang=L;
+}
+function markAccent(){
+  document.querySelectorAll('.sw[data-v]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.profile.accent)));
+  const c=$('#sw-custom');
+  if(c){c.classList.toggle('on',S.profile.accent==='custom');
+    if(validHex(S.profile.customColor)){const [l,d]=deriveAccent(S.profile.customColor,groundRgb());c.style.setProperty('--l',l);c.style.setProperty('--d',d);c.classList.add('set')}}
+  const n=$('#acc-name');if(n)n.textContent=accentName();
+}
+
+/* ================= derived ================= */
+function semInfo(d){
+  /* teaching weeks run Monday to Sunday, so count from the Monday of the semester's first week */
+  const s0=parseYMD(S.profile.semStart), s=addDays(s0,-dowMon(s0)), W=+S.profile.semWeeks||16;
+  const n=Math.floor(Math.round((startOfDay(d)-s)/DAY)/7)+1;
+  if(isNaN(n))return {label:'',frac:0};
+  if(n<1)return {label:t('sem.before'),frac:0};
+  if(n>W)return {label:t('sem.done'),frac:1};
+  return {label:t('sem.week',{n,w:W}),frac:n/W};
+}
+const semWeek=d=>semInfo(d).label;
+function dueInfo(x){
+  const d=new Date(x.due), ms=d-Date.now();
+  let cls='later';
+  if(x.done)cls='done';else if(ms<0)cls='over';else if(ms<DAY)cls='soon';else if(ms<3*DAY)cls='near';
+  const days=Math.round((startOfDay(d)-startOfDay(new Date()))/DAY), tm=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  let label;
+  if(days===0)label=t('due.today',{t:tm});else if(days===1)label=t('due.tmr',{t:tm});else if(days===-1)label=t('due.yday',{t:tm});
+  else if(days<0)label=t('due.ago',{n:-days});else if(days<7)label=`${DOW[L][dowMon(d)]}, ${tm}`;
+  else label=shortDate(ymd(d));
+  return {cls,label};
+}
+function activeReminders(){
+  const now=Date.now();
+  return S.tasks.filter(x=>{
+    if(x.done||!(+x.remind>0)||S.dismissed.includes(x.id+'@'+x.due))return false;
+    const d=new Date(x.due).getTime();
+    return d-x.remind*36e5<=now&&now<d;
+  }).sort(byDue);
+}
+const eventsOn=k=>S.events.filter(e=>k>=e.date&&k<=(e.end||e.date));
+function sumFocus(days){const since=ymd(addDays(startOfDay(new Date()),-(days-1)));return S.sessions.filter(s=>s.date>=since).reduce((a,s)=>a+(+s.minutes||0),0)}
+
+/* ================= icons ================= */
+const ip=d=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+const ICON={
+  home:ip('M4 10.5L12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z'),
+  tasks:ip('M10 6.5h10M10 12h10M10 17.5h10M4 6.5l1.4 1.4L7.8 5.5M4 12l1.4 1.4L7.8 11M4 17.5l1.4 1.4 2.4-2.4'),
+  cal:ip('M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V7A1.5 1.5 0 0 1 5 5.5zM3.5 10h17M8 3.5v4M16 3.5v4'),
+  grid:ip('M5 4.5h14A1.5 1.5 0 0 1 20.5 6v12a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18V6A1.5 1.5 0 0 1 5 4.5zM3.5 9.5h17M3.5 14.5h17M9.5 4.5v15'),
+  book:ip('M5 4.5h11a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2zM5 17.5a2 2 0 0 1 2-2h11M9 8.5h5'),
+  clock:ip('M4.5 13a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0-15 0M12 9.5V13l2.3 1.8M9.5 3h5'),
+  sliders:ip('M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4'),
+  plus:ip('M12 5.5v13M5.5 12h13'),
+  check:ip('M5 12.5l4.5 4.5L19 7'),
+  bell:ip('M6.5 16v-5a5.5 5.5 0 1 1 11 0v5l1.5 2h-14zM10 20.5a2 2 0 0 0 4 0'),
+  x:ip('M6.5 6.5l11 11M17.5 6.5l-11 11'),
+  left:ip('M14.5 6l-6 6 6 6'),
+  right:ip('M9.5 6l6 6-6 6')
+};
+const NAVI={today:ICON.home,tasks:ICON.tasks,calendar:ICON.cal,timetable:ICON.grid,courses:ICON.book,focus:ICON.clock,prefs:ICON.sliders};
+
+/* ================= shared pieces ================= */
+function taskRow(x){
+  const c=course(x.courseId), di=dueInfo(x), st=x.subtasks||[], sd=st.filter(s=>s.done).length;
+  const meta=[c?`<span class="code"><i class="dot"></i>${esc(c.code)}</span>`:'',`<span>${typeName(x.type)}</span>`,st.length?`<span>${t('task.steps',{a:sd,b:st.length})}</span>`:'',x.priority==='high'&&!x.done?`<span class="hi">${t('task.high')}</span>`:''].join('');
+  return `<li class="task ${x.done?'is-done':''}" style="--cc:${cc(c)}">
+    <button class="check" data-act="toggle" data-id="${x.id}" aria-label="${x.done?t('task.markOpen'):t('task.markDone')}: ${esc(x.title)}" aria-pressed="${x.done}">${ICON.check}</button>
+    <button class="task-main" data-act="edit-task" data-id="${x.id}"><span class="task-title">${esc(x.title)}</span><span class="task-meta">${meta}</span></button>
+    <span class="due due-${di.cls}">${di.label}</span>
+  </li>`;
+}
+function head(kicker,title,action='',extra=''){return `<header class="ph"><div><p class="ph-k">${kicker}</p><h1>${title}</h1>${extra}</div>${action?`<div>${action}</div>`:''}</header>`}
+function notice(){
+  if(!S.isSample||S.bannerHidden)return '';
+  return `<div class="notice"><span>${t('notice.sample')}</span><button class="lnk" data-act="clear-data">${t('notice.clear')}</button><button class="icon-btn" data-act="hide-banner" aria-label="${t('notice.hide')}">${ICON.x}</button></div>`;
+}
+const newTaskBtn=()=>`<button class="btn primary" data-act="new-task">${ICON.plus}${t('btn.newTask')}</button>`;
+const langSeg=(cls='')=>`<div class="seg ${cls}" role="group" aria-label="${t('pf.lang')}">${[['en','English'],['mn','Монгол']].map(([k,l])=>`<button data-act="lang" data-v="${k}" aria-pressed="${L===k}" lang="${k}">${l}</button>`).join('')}</div>`;
+
+/* ================= views ================= */
+let view='today';
+const TF={status:'open',course:'',type:''};
+let calM=new Date(new Date().getFullYear(),new Date().getMonth(),1), calSel=ymd(new Date());
+
+function vToday(){
+  const now=new Date(), today=startOfDay(now), dow=dowMon(now), h=now.getHours();
+  const greet=t(h<5||h>=18?'greet.e':h<12?'greet.m':'greet.a');
+  const name=S.profile.name.trim();
+  const classes=S.classes.filter(c=>c.day===dow).sort((a,b)=>a.p-b.p);
+  const open=S.tasks.filter(x=>!x.done);
+  const over=open.filter(x=>new Date(x.due)<now).sort(byDue);
+  const upcoming=open.filter(x=>{const d=new Date(x.due);return d>=now&&d<addDays(today,8)}).sort(byDue);
+  const rem=activeReminders();
+  const summary=`<p class="summary"><span>${tb(classes.length===1?'sum.class1':'sum.classes',classes.length)}</span><span>${tb('sum.due7',upcoming.length)}</span>${over.length?`<span class="bad">${tb('sum.over',over.length)}</span>`:''}<span>${tb('sum.focus',fmtMin(sumFocus(7)))}</span></p>`;
+  const classLine=cl=>{
+    const c=course(cl.courseId), stt=atTime(now,PERIODS[cl.p][0]), en=atTime(now,PERIODS[clsEnd(cl)][1]);
+    const state=now>en?'past':now>=stt?'now':'next';
+    return `<li class="cls ${state}" style="--cc:${cc(c)}"><span class="cls-t">${PERIODS[cl.p][0]}<small>${PERIODS[clsEnd(cl)][1]}</small></span>
+      <span class="cls-b"><span class="cls-n"><i class="dot"></i><b>${esc(c?c.code:'—')}</b><span>${esc(c?c.name:'')}</span></span><small>${esc(ctName(cl.type))}${cl.room?' · '+esc(cl.room):''} · ${clsPer(cl)}</small></span>
+      ${state==='now'?`<span class="tag">${t('now')}</span>`:''}</li>`;
+  };
+  return `${head(`${fmtLong(now)}${semWeek(now)?' · '+semWeek(now):''}`,`${greet}${name?', '+esc(name):''}`,newTaskBtn(),summary)}
+  ${notice()}
+  ${rem.length?`<section class="rems" aria-label="${t('rem.label')}">${rem.map(x=>{const c=course(x.courseId);return `<div class="rem">${ICON.bell}<div><b>${esc(x.title)}</b><small>${c?esc(c.code)+' · ':''}${t('rem.due',{d:esc(dueInfo(x).label)})}</small></div><button class="btn sm" data-act="edit-task" data-id="${x.id}">${t('btn.open')}</button><button class="icon-btn" data-act="dismiss" data-id="${x.id}" aria-label="${t('rem.dismiss')}">${ICON.x}</button></div>`}).join('')}</section>`:''}
+  <div class="split">
+    <section><div class="sec-h"><h2>${t('today.schedule')}</h2><a href="#timetable" class="lnk">${t('link.timetable')}</a></div>
+      ${classes.length?`<ol class="rows">${classes.map(classLine).join('')}</ol>`:`<p class="empty">${t(dow===6?'today.noSun':'today.none')} ${S.classes.length?'':`<a href="#timetable" class="lnk">${t('today.setup')}</a>`}</p>`}
+    </section>
+    <section><div class="sec-h"><h2>${t('today.deadlines')}</h2><a href="#tasks" class="lnk">${t('link.allTasks')}</a></div>
+      ${over.length?`<h3 class="grp bad">${t('grp.overdue')} <span>${over.length}</span></h3><ul class="rows">${over.map(taskRow).join('')}</ul>`:''}
+      <h3 class="grp">${t('grp.next7')} <span>${upcoming.length}</span></h3>
+      ${upcoming.length?`<ul class="rows">${upcoming.map(taskRow).join('')}</ul>`:`<p class="empty">${t('today.nothing7')}</p>`}
+    </section>
+  </div>`;
+}
+
+function vTasks(){
+  const list=S.tasks.filter(x=>TF.status==='all'||(TF.status==='open'?!x.done:x.done)).filter(x=>!TF.course||x.courseId===TF.course).filter(x=>!TF.type||x.type===TF.type);
+  const open=S.tasks.filter(x=>!x.done).length;
+  const out=head(t('tasks.kicker'),t('tasks.title'),newTaskBtn(),`<p class="summary"><span>${tb('sum.open',open)}</span><span>${tb('sum.done',S.tasks.length-open)}</span></p>`)+
+  `<div class="toolbar"><div class="seg" role="group" aria-label="${t('st.label')}">${[['open','st.open'],['done','st.done'],['all','st.all']].map(([k,l])=>`<button data-act="tf-status" data-v="${k}" aria-pressed="${TF.status===k}">${t(l)}</button>`).join('')}</div>
+    <select id="tf-course" data-change="tf-course" aria-label="${t('f.byCourse')}"><option value="">${t('f.allCourses')}</option>${S.courses.map(c=>`<option value="${c.id}" ${TF.course===c.id?'selected':''}>${esc(c.code)}</option>`).join('')}</select>
+    <select id="tf-type" data-change="tf-type" aria-label="${t('f.byType')}"><option value="">${t('f.allTypes')}</option>${Object.entries(TYPES[L]).map(([k,v])=>`<option value="${k}" ${TF.type===k?'selected':''}>${v}</option>`).join('')}</select></div>`;
+  if(!list.length)return out+`<p class="empty">${t(S.tasks.length?'tasks.noMatch':'tasks.none')}</p>`;
+  let groups;
+  if(TF.status==='done')groups=[['done',list.slice().sort((a,b)=>byDue(b,a))]];
+  else{
+    const now=new Date(), tmr=addDays(startOfDay(now),1), wk=addDays(startOfDay(now),8);
+    const g={overdue:[],today:[],week:[],later:[],done:[]};
+    list.slice().sort(byDue).forEach(x=>{const d=new Date(x.due);
+      if(x.done)g.done.push(x);else if(d<now)g.overdue.push(x);else if(d<tmr)g.today.push(x);else if(d<wk)g.week.push(x);else g.later.push(x)});
+    groups=Object.entries(g).filter(([,v])=>v.length);
+  }
+  return out+`<div>${groups.map(([k,v])=>`<section><h2 class="grp ${k==='overdue'?'bad':''}">${t('grp.'+k)} <span>${v.length}</span></h2><ul class="rows">${v.map(taskRow).join('')}</ul></section>`).join('')}</div>`;
+}
+
+function vCalendar(){
+  const first=calM, start=addDays(first,-dowMon(first)), todayK=ymd(new Date());
+  let cells=DOW[L].map(d=>`<div class="dow">${d}</div>`).join('');
+  for(let i=0;i<42;i++){
+    const d=addDays(start,i), k=ymd(d), ts=S.tasks.filter(x=>x.due.slice(0,10)===k).sort(byDue), ev=eventsOn(k);
+    const aria=`${fmtLong(d)}${ts.length?', '+t('cal.dueN',{n:ts.length}):''}${ev.length?', '+ev.map(e=>e.title).join(', '):''}`;
+    const chips=ts.slice(0,2).map(x=>`<span class="chip ${x.done?'done':''} ${x.type==='exam'?'ex':''}" style="--cc:${cc(course(x.courseId))}"><i class="dot"></i><span>${esc(x.title)}</span></span>`).join('');
+    cells+=`<button class="day ${d.getMonth()!==first.getMonth()?'out':''} ${k===todayK?'today':''} ${k===calSel?'sel':''}" data-act="cal-sel" data-v="${k}" aria-label="${esc(aria)}" aria-pressed="${k===calSel}">
+      <span class="dn">${d.getDate()}</span>${ev.length?`<span class="evl k-${ev[0].kind}">${esc(ev[0].title)}</span>`:''}${chips}${ts.length>2?`<span class="more">${t('cal.more',{n:ts.length-2})}</span>`:''}
+      <span class="dots">${ev.length?`<i class="kd k-${ev[0].kind}"></i>`:''}${ts.slice(0,4).map(x=>`<i style="--cc:${cc(course(x.courseId))}" class="${x.done?'d':''}"></i>`).join('')}</span></button>`;
+  }
+  const sel=parseYMD(calSel), evs=eventsOn(calSel), ts=S.tasks.filter(x=>x.due.slice(0,10)===calSel).sort(byDue);
+  const cls=S.classes.filter(c=>c.day===dowMon(sel)).sort((a,b)=>a.p-b.p);
+  return `${head(t('cal.kicker'),t('cal.title'),`<button class="btn primary" data-act="new-event" data-date="${calSel}">${ICON.plus}${t('btn.newEvent')}</button>`)}
+  <div class="cal-layout">
+    <section>
+      <div class="cal-bar"><div class="cal-nav"><button class="icon-btn" data-act="cal-prev" aria-label="${t('cal.prev')}">${ICON.left}</button><button class="icon-btn" data-act="cal-next" aria-label="${t('cal.next')}">${ICON.right}</button><h2>${monthYear(first)}</h2></div><button class="btn sm" data-act="cal-today">${t('cal.today')}</button></div>
+      <div class="cal">${cells}</div>
+      <div class="legend">${Object.entries(KINDS[L]).map(([k,v])=>`<span><i class="k-${k}"></i>${v}</span>`).join('')}</div>
+    </section>
+    <section class="dp" aria-live="polite">
+      <p class="ph-k">${esc(semWeek(sel))}</p>
+      <h2>${fmtLong(sel)}</h2>
+      <div class="dp-actions"><button class="btn sm" data-act="new-task" data-date="${calSel}">${ICON.plus}${t('btn.task')}</button><button class="btn sm" data-act="new-event" data-date="${calSel}">${ICON.plus}${t('btn.event')}</button></div>
+      ${evs.length?`<h3 class="grp">${t('cal.events')}</h3><ul class="evlist">${evs.map(e=>`<li><button class="ev k-${e.kind}" data-act="edit-event" data-id="${e.id}"><i></i><span><b>${esc(e.title)}</b><small>${KINDS[L][e.kind]||''}${e.end&&e.end!==e.date?` · ${shortDate(e.date)} – ${shortDate(e.end)}`:''}</small></span></button></li>`).join('')}</ul>`:''}
+      <h3 class="grp">${t('cal.due')} <span>${ts.length}</span></h3>${ts.length?`<ul class="rows">${ts.map(taskRow).join('')}</ul>`:`<p class="empty">${t('cal.nothing')}</p>`}
+      ${cls.length?`<h3 class="grp">${t('cal.classes')}</h3><ul class="mini">${cls.map(cl=>{const c=course(cl.courseId);return `<li style="--cc:${cc(c)}"><span class="t">${clsTime(cl)}</span><i class="dot"></i><b>${esc(c?c.code:'')}</b><span class="muted">${esc(ctName(cl.type))}</span></li>`}).join('')}</ul>`:''}
+    </section>
+  </div>`;
+}
+
+function vTimetable(){
+  const td=dowMon(new Date());
+  let g=`<div class="tt-c tt-h" style="grid-area:1/1">${t('tt.period')}</div>`+DOWL[L].slice(0,6).map((d,i)=>`<div class="tt-c tt-h ${i===td?'is-today':''}" style="grid-area:1/${i+2}">${d}</div>`).join('');
+  PERIODS.forEach(([s,e],pi)=>{g+=`<div class="tt-c tt-t" style="grid-area:${ROW(pi)}/1"><b>${pi+1}</b><span><span>${s}</span><span>${e}</span></span></div>`});
+  g+=`<div class="tt-c tt-break" style="grid-area:8/1/9/8">${t('tt.lunch')} · 13:30–14:20</div>`;
+  for(let d=0;d<6;d++){
+    const used=new Array(12).fill(false);
+    S.classes.filter(c=>c.day===d).sort((a,b)=>a.p-b.p).forEach(cl=>{
+      if(used[cl.p])return;
+      const end=clsEnd(cl), c=course(cl.courseId);
+      for(let q=cl.p;q<=end;q++)used[q]=true;
+      g+=`<div class="tt-c tt-blk ${d===td?'is-today':''}" style="grid-area:${ROW(cl.p)}/${d+2}/${ROW(end)+1}/${d+3}"><button class="blk" style="--cc:${cc(c)}" data-act="edit-class" data-id="${cl.id}"><b><i class="dot"></i>${esc(c?c.code:'?')}</b><span>${esc(ctName(cl.type))}${cl.room?' · '+esc(cl.room):''}</span><span class="tm">${clsTime(cl)}</span></button></div>`;
+    });
+    for(let pi=0;pi<12;pi++)if(!used[pi])g+=`<div class="tt-c ${d===td?'is-today':''}" style="grid-area:${ROW(pi)}/${d+2}"><button class="slot" data-act="new-class" data-day="${d}" data-p="${pi}" aria-label="${t('tt.addAt',{d:DOWL[L][d],p:pi+1})}">${ICON.plus}</button></div>`;
+  }
+  const periods=S.classes.reduce((a,c)=>a+(c.len||1),0);
+  return `${head(t('tt.kicker'),t('tt.title'),`<button class="btn primary" data-act="new-class">${ICON.plus}${t('btn.addClass')}</button>`,`<p class="summary"><span>${tb('sum.clsWk',S.classes.length)}</span><span>${tb('sum.periods',periods)}</span></p>`)}
+  ${S.courses.length?'':`<div class="notice"><span>${t('tt.needCourses')}</span><a class="lnk" href="#courses">${t('tt.goCourses')}</a></div>`}
+  <div class="tt-wrap"><div class="tt">${g}</div></div>
+  <p class="hint">${t('tt.hint')}</p>`;
+}
+
+function vCourses(){
+  const credits=S.courses.reduce((a,c)=>a+(+c.credits||0),0);
+  const rows=S.courses.map(c=>{
+    const open=S.tasks.filter(x=>x.courseId===c.id&&!x.done).length, nCls=S.classes.filter(x=>x.courseId===c.id).length;
+    return `<button class="tr" style="--cc:${cc(c)}" data-act="edit-course" data-id="${c.id}">
+      <span class="c-name"><b><i class="dot"></i>${esc(c.code)}</b><span>${esc(c.name)}</span><span class="c-meta">${[esc(c.instructor),esc(c.room),t('openTasks',{n:open})].filter(Boolean).join(' · ')}</span></span>
+      <span class="c-x ${c.instructor?'':'soft'}">${esc(c.instructor)||t('notSet')}</span>
+      <span class="c-x ${c.room?'':'soft'}">${esc(c.room)||'—'}</span>
+      <span class="c-x r">${nCls}</span><span class="c-x r">${open}</span><span class="r">${t('cr',{n:+c.credits||0})}</span></button>`;
+  }).join('');
+  return `${head(t('courses.kicker'),t('courses.title'),`<button class="btn primary" data-act="new-course">${ICON.plus}${t('btn.addCourse')}</button>`,`<p class="summary"><span>${tb('sum.courses',S.courses.length)}</span><span>${tb('sum.credits',credits)}</span></p>`)}
+  ${S.courses.length?`<div class="tbl"><div class="tr th"><span>${t('th.course')}</span><span>${t('th.instr')}</span><span>${t('th.room')}</span><span class="r">${t('th.cls')}</span><span class="r">${t('th.open')}</span><span class="r">${t('th.credits')}</span></div>${rows}</div>`:`<p class="empty">${t('courses.none')}</p>`}`;
+}
+
+/* focus timer */
+const P={mode:'work',running:false,endAt:0,remaining:null,round:1,courseId:'',taskId:''};
+const modeLen=m=>{const q=S.profile.pomo;return (m==='work'?q.work:m==='short'?q.short:q.long)*60};
+P.remaining=modeLen('work');
+const pRemaining=()=>P.running?Math.max(0,(P.endAt-Date.now())/1000):P.remaining;
+function vFocus(){
+  const q=S.profile.pomo;
+  const since=ymd(addDays(startOfDay(new Date()),-6)), by={};
+  S.sessions.filter(s=>s.date>=since).forEach(s=>{const k=s.courseId||'';by[k]=(by[k]||0)+(+s.minutes||0)});
+  const max=Math.max(1,...Object.values(by)), total=Object.values(by).reduce((a,b)=>a+b,0);
+  const tasksFor=S.tasks.filter(x=>!x.done&&(!P.courseId||x.courseId===P.courseId)).sort(byDue);
+  const recent=S.sessions.slice(-6).reverse();
+  return `${head(t('focus.kicker'),t('focus.title'))}
+  <div class="focus">
+    <section class="timer">
+      <div class="seg" role="group" aria-label="${t('mode.label')}">${[['work',q.work],['short',q.short],['long',q.long]].map(([m,n])=>`<button data-act="pmode" data-v="${m}" aria-pressed="${P.mode===m}">${t('mode.'+m)} · ${t('minShort',{n})}</button>`).join('')}</div>
+      <div class="ring ${P.mode==='work'?'':'brk'}"><svg viewBox="0 0 240 240" aria-hidden="true"><circle class="trk" cx="120" cy="120" r="112"/><circle id="ring-p" class="prg" cx="120" cy="120" r="112" style="stroke-dasharray:${CIRC}"/></svg>
+        <div class="ring-in"><span id="p-time" class="p-time" role="timer">00:00</span><span id="p-label" class="p-label"></span></div></div>
+      <div class="p-ctrl"><button class="btn primary lg" id="p-start" data-act="pstart">${t('btn.start')}</button><button class="btn lg" data-act="preset">${t('btn.reset')}</button><button class="btn lg" data-act="pskip">${t('btn.skip')}</button></div>
+      <div class="p-attach">
+        <label class="field"><span>${t('focus.for')}</span><select id="p-course" data-change="p-course"><option value="">${t('focus.general')}</option>${S.courses.map(c=>`<option value="${c.id}" ${P.courseId===c.id?'selected':''}>${esc(c.code)} · ${esc(c.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>${t('focus.task')}</span><select id="p-task" data-change="p-task"><option value="">${t('focus.noTask')}</option>${tasksFor.map(x=>`<option value="${x.id}" ${P.taskId===x.id?'selected':''}>${esc(x.title)}</option>`).join('')}</select></label>
+      </div>
+      <p class="hint">${t('focus.hint')}</p>
+    </section>
+    <section>
+      <h2>${t('focus.last7')}</h2>
+      <p class="wk-total">${fmtMin(total)}</p>
+      ${Object.keys(by).length?`<ul class="bars">${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,m])=>{const c=course(k);return `<li style="--cc:${cc(c)}"><span class="bl"><i class="dot"></i>${esc(c?c.code:t('focus.generalShort'))}</span><span class="bt"><i style="width:${m/max*100}%"></i></span><span class="bv">${fmtMin(m)}</span></li>`}).join('')}</ul>`:`<p class="empty">${t('focus.none')}</p>`}
+      ${recent.length?`<h3 class="grp" style="margin-top:28px">${t('focus.recent')}</h3><ul class="log">${recent.map(s=>{const c=course(s.courseId), x=task(s.taskId);return `<li><span>${shortDate(s.date)}</span><span>${fmtMin(s.minutes)} · ${esc(c?c.code:t('focus.generalShort'))}${x?' · '+esc(x.title):''}</span></li>`}).join('')}</ul>`:''}
+    </section>
+  </div>`;
+}
+function updateFocusUI(){
+  const rem=pRemaining(), tot=modeLen(P.mode), q=S.profile.pomo, el=$('#p-time');
+  if(el){
+    el.textContent=mmss(rem);
+    $('#p-label').textContent=P.mode==='work'?t('focus.round',{i:((P.round-1)%q.rounds)+1,n:q.rounds}):t('mode.'+P.mode);
+    $('#ring-p').style.strokeDashoffset=String(CIRC*(1-Math.min(1,rem/tot)));
+    $('#p-start').textContent=t(P.running?'btn.pause':(rem<tot?'btn.resume':'btn.start'));
+  }
+  document.querySelectorAll('[data-badge="focus"]').forEach(b=>{b.hidden=!P.running;if(b.classList.contains('nav-n'))b.textContent=mmss(rem)});
+}
+let AC=null, wake=null;
+function ensureAudio(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.resume)AC.resume()}catch(e){}}
+function chime(){if(!AC)return;try{[0,.28,.56].forEach((o,i)=>{const osc=AC.createOscillator(),g=AC.createGain(),t0=AC.currentTime+o;osc.type='sine';osc.frequency.value=i===2?880:660;g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.22,t0+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+.24);osc.connect(g);g.connect(AC.destination);osc.start(t0);osc.stop(t0+.26)})}catch(e){}}
+function holdWake(){try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(w=>{wake=w},()=>{})}catch(e){}}
+function dropWake(){try{if(wake)wake.release()}catch(e){}wake=null}
+document.addEventListener('pointerdown',ensureAudio,{once:true}); /* browsers only allow sound after the first tap */
+
+/* system notifications: work when the planner runs from its own website, not inside an embedded preview */
+function notifState(){
+  if(!('Notification' in window)||window.self!==window.top)return 'unsupported';
+  if(Notification.permission==='denied')return 'denied';
+  if(Notification.permission==='granted'&&S.profile.notify)return 'on';
+  return 'off';
+}
+function notifCtrl(){
+  const st=notifState();
+  if(st==='unsupported')return `<p class="hint">${t('notif.unsupported')}</p>`;
+  if(st==='denied')return `<p class="hint">${t('notif.denied')}</p>`;
+  if(st==='on')return `<p class="hint" style="width:100%">${t('notif.on')}</p><button class="btn sm" data-act="notif-test">${t('notif.test')}</button><button class="btn sm" data-act="notif-off">${t('notif.off')}</button>`;
+  return `<button class="btn sm primary" data-act="notif-on">${t('notif.enable')}</button>`;
+}
+async function enableNotif(){
+  try{const r=await Notification.requestPermission();if(r==='granted'){S.profile.notify=true;save();toast(t('toast.notifOn'))}}catch(e){}
+  render();
+}
+async function sysNotify(title,body,tag){
+  const opts={body,icon:'icon-192.png',badge:'icon-192.png',tag:tag||'ufe-planner',lang:L};
+  try{
+    const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
+    if(reg){await reg.showNotification(title,opts);return}
+    new Notification(title,opts);
+  }catch(e){}
+}
+function alertMsg(m){toast(m);if(notifState()==='on'&&document.hidden)sysNotify(t('app.name'),m,'ufe-focus')}
+function nextMode(log){
+  const q=S.profile.pomo;
+  if(P.mode==='work'){
+    if(log){S.sessions.push({id:uid(),date:ymd(new Date()),at:new Date().toISOString(),minutes:q.work,courseId:P.courseId,taskId:P.taskId});if(S.sessions.length>600)S.sessions=S.sessions.slice(-600);save()}
+    const long=P.round%q.rounds===0;P.round++;P.mode=long?'long':'short';
+    if(log)alertMsg(t(long?'toast.roundsDone':'toast.round'));
+  }else{P.mode='work';if(log)alertMsg(t('toast.breakOver'))}
+  P.running=false;dropWake();P.remaining=modeLen(P.mode);
+}
+
+function vPrefs(){
+  const q=S.profile;
+  const row=(label,desc,ctrl,forId)=>`<div class="srow"><div class="srow-l">${forId?`<label for="${forId}">${label}</label>`:`<span>${label}</span>`}${desc?`<p>${desc}</p>`:''}</div><div class="srow-c">${ctrl}</div></div>`;
+  const sel=(k,opts,v)=>`<select id="pf-${k}" data-change="pref" data-k="${k}">${opts.map(([a,b])=>`<option value="${a}" ${String(v)===String(a)?'selected':''}>${b}</option>`).join('')}</select>`;
+  const num=(k,v,min,max,unit)=>`<input type="number" id="pf-${k.replace('.','-')}" data-change="pref" data-k="${k}" value="${v}" min="${min}" max="${max}" inputmode="numeric"><span class="unit">${t(unit)}</span>`;
+  const g=groundRgb(), [cl,cd]=validHex(q.customColor)?deriveAccent(q.customColor,g):['',''];
+  const swatches=`<div class="sws">${Object.entries(ACCENTS).map(([k,v])=>`<button class="sw" data-act="accent" data-v="${k}" style="--l:${DER[k][0]};--d:${DER[k][1]}" aria-pressed="${q.accent===k}" aria-label="${v[LI()]}" title="${v[LI()]}"></button>`).join('')}
+    <label class="sw sw-custom ${cl?'set':''} ${q.accent==='custom'?'on':''}" id="sw-custom" title="${t('pf.customPick')}" ${cl?`style="--l:${cl};--d:${cd}"`:''}><input type="color" id="pf-color" data-change="color" value="${validHex(q.customColor)?q.customColor:'#21409a'}" aria-label="${t('pf.customPick')}"></label></div>
+    <span class="acc-name" id="acc-name">${esc(accentName())}</span>`;
+  const bgList=(set,act,cur)=>`<div class="bgopts">${Object.entries(set).map(([k,v])=>`<button class="bgopt" data-act="${act}" data-v="${k}" aria-pressed="${cur===k}"><i style="--a:${v[2][0]};--b:${v[2][1]}"></i>${v[LI()]}</button>`).join('')}</div>`;
+  const bgs=bgList(DARKBG,'darkbg',q.darkBg), lbgs=bgList(LIGHTBG,'lightbg',q.lightBg);
+  return `${head(t('prefs.kicker'),t('prefs.title'))}
+  <section class="set"><h2>${t('sec.appearance')}</h2>
+    ${row(t('pf.lang'),t('pf.langD'),langSeg())}
+    ${row(t('pf.accent'),t('pf.accentD'),swatches)}
+    ${row(t('pf.theme'),'',`<div class="seg" role="group" aria-label="${t('pf.theme')}">${['system','light','dark'].map(k=>`<button data-act="theme" data-v="${k}" aria-pressed="${q.theme===k}">${t('theme.'+k)}</button>`).join('')}</div>`)}
+    ${row(t('pf.lightBg'),t('pf.lightBgD'),lbgs)}
+    ${row(t('pf.darkBg'),t('pf.darkBgD'),bgs)}
+  </section>
+  <section class="set"><h2>${t('sec.profile')}</h2>
+    ${row(t('pf.name'),t('pf.nameD'),`<input type="text" id="pf-name" data-change="pref" data-k="name" value="${esc(q.name)}" maxlength="40" placeholder="${t('pf.namePh')}">`,'pf-name')}
+    ${row(t('pf.year'),'',sel('year',YEARS[L].map((y,i)=>[i?String(i):'',y]),q.year),'pf-year')}
+    ${row(t('pf.program'),'',`<input type="text" id="pf-program" data-change="pref" data-k="program" value="${esc(q.program)}" maxlength="60" placeholder="${t('pf.programPh')}">`,'pf-program')}
+  </section>
+  <section class="set"><h2>${t('sec.semester')}</h2>
+    ${row(t('pf.semStart'),t('pf.semStartD'),`<input type="date" id="pf-semStart" data-change="pref" data-k="semStart" value="${esc(q.semStart)}">`,'pf-semStart')}
+    ${row(t('pf.semLen'),'',num('semWeeks',q.semWeeks,1,30,'u.weeks'),'pf-semWeeks')}
+  </section>
+  <section class="set"><h2>${t('sec.notify')}</h2>
+    ${row(t('pf.remind'),t('pf.remindD'),sel('remindLead',REMINDS[L],q.remindLead),'pf-remindLead')}
+    ${row(t('pf.sound'),t('pf.soundD'),`<div class="seg" role="group" aria-label="${t('pf.sound')}">${[['1','on'],['0','off']].map(([v,k])=>`<button data-act="sound" data-v="${v}" aria-pressed="${(q.sound?'1':'0')===v}">${t(k)}</button>`).join('')}</div><button class="btn sm" data-act="test-sound">${t('btn.test')}</button>`)}
+    ${row(t('pf.notif'),t('pf.notifD'),notifCtrl())}
+  </section>
+  <section class="set"><h2>${t('sec.focus')}</h2>
+    ${row(t('pf.work'),'',num('pomo.work',q.pomo.work,5,90,'u.min'),'pf-pomo-work')}
+    ${row(t('pf.short'),'',num('pomo.short',q.pomo.short,1,30,'u.min'),'pf-pomo-short')}
+    ${row(t('pf.long'),'',num('pomo.long',q.pomo.long,5,60,'u.min'),'pf-pomo-long')}
+    ${row(t('pf.rounds'),'',num('pomo.rounds',q.pomo.rounds,2,8,'u.rounds'),'pf-pomo-rounds')}
+  </section>
+  <section class="set"><h2>${t('sec.data')}</h2>
+    ${row(t('pf.backup'),t('pf.backupD'),`<button class="btn sm" data-act="copy-backup">${t('btn.copyBackup')}</button><textarea id="backup-box" class="backup" rows="3" readonly hidden aria-label="${t('backupText')}"></textarea>`)}
+    ${row(t('pf.restore'),t('pf.restoreD'),`<textarea id="restore-box" class="backup" rows="3" placeholder="${t('pf.restorePh')}" aria-label="${t('pf.restore')}"></textarea><button class="btn sm" data-act="restore">${t('btn.restore')}</button>`)}
+    ${row(t('pf.reset'),'',`<button class="btn sm" data-act="load-sample">${t('btn.loadSample')}</button><button class="btn sm danger" data-act="clear-data">${t('btn.clear')}</button>`)}
+  </section>
+  <p class="disclaimer">${t('disclaimer')}</p>`;
+}
+
+/* ================= render / routing ================= */
+const VIEWS={today:vToday,tasks:vTasks,calendar:vCalendar,timetable:vTimetable,courses:vCourses,focus:vFocus,prefs:vPrefs};
+const main=$('#main');
+function buildNav(){
+  const item=k=>`<a href="#${k}" data-nav="${k}">${NAVI[k]}<span>${t('nav.'+k)}</span>${k==='today'||k==='focus'?`<span class="nav-n" data-badge="${k}" hidden></span>`:''}</a>`;
+  const grp=(label,keys)=>`<div class="nav-g">${label?`<p class="nav-l">${label}</p>`:''}${keys.map(item).join('')}</div>`;
+  const side=$('#side-nav');side.setAttribute('aria-label',t('nav.sections'));
+  side.innerHTML=grp(t('nav.plan'),['today','tasks','calendar','timetable'])+grp(t('nav.study'),['courses','focus'])+grp('',['prefs']);
+  const tab=$('#tabbar');tab.setAttribute('aria-label',t('nav.sections'));
+  tab.innerHTML=['today','tasks','calendar','timetable','focus'].map(k=>`<a href="#${k}" data-nav="${k}">${NAVI[k]}<span>${t('nav.'+k)}</span>${k==='today'||k==='focus'?`<i class="tdot" data-badge="${k}" hidden></i>`:''}</a>`).join('');
+  $('#mtop-r').innerHTML=`<button class="lang-btn" data-act="lang" data-v="${L==='mn'?'en':'mn'}" aria-label="${t('lang.switch')}">${L==='mn'?'EN':'МН'}</button>`+['courses','prefs'].map(k=>`<a href="#${k}" data-nav="${k}" aria-label="${t('nav.'+k)}" title="${t('nav.'+k)}">${NAVI[k]}</a>`).join('');
+  document.querySelectorAll('.brand-word').forEach(b=>{b.textContent=t('brand')});
+}
+function updateBadges(){
+  const now=new Date(), n=activeReminders().length+S.tasks.filter(x=>!x.done&&new Date(x.due)<now).length;
+  document.querySelectorAll('[data-badge="today"]').forEach(b=>{b.hidden=!n;if(b.classList.contains('nav-n')){b.textContent=n;b.setAttribute('aria-label',t('attn',{n}))}});
+  const q=S.profile, si=semInfo(now);
+  const who=[q.name.trim(),q.year?YEARS[L][+q.year]||'':'',q.program.trim()].filter(Boolean).join(' · ');
+  $('#side-foot').innerHTML=`${who?`<b>${esc(who)}</b>`:''}<div class="sem"><span>${esc(si.label)}</span><span class="num">${Math.round(si.frac*100)}%</span></div><div class="sem-bar"><i style="width:${si.frac*100}%"></i></div><div class="side-lang">${langSeg('xs')}</div><span class="disclaimer">${t('disclaimer')}</span>`;
+  updateFocusUI();
+}
+function render(){
+  applyTheme();
+  buildNav();
+  document.querySelectorAll('[data-nav]').forEach(a=>{if(a.dataset.nav===view)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  main.innerHTML=VIEWS[view]();
+  updateBadges();
+}
+function route(){const h=location.hash.slice(1);const nv=VIEWS[h]?h:'today';const changed=nv!==view;view=nv;render();if(changed){window.scrollTo(0,0);main.focus({preventScroll:true})}}
+window.addEventListener('hashchange',route);
+
+/* ================= toast ================= */
+let toastT=0;
+function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2800)}
+
+/* ================= modal ================= */
+const scrim=$('#scrim'), sheet=$('#sheet');let M=null;
+function openModal(o){
+  M=o;
+  sheet.innerHTML=`<header class="sheet-h"><h2 id="sheet-t">${o.title}</h2><button type="button" class="icon-btn" data-act="close" aria-label="${t('btn.close')}">${ICON.x}</button></header>
+  <div class="sheet-b">${o.body}</div>
+  <footer class="sheet-f">${o.onDelete?`<button type="button" class="btn danger" data-act="m-delete">${t('btn.delete')}</button>`:''}<span class="sp"></span><button type="button" class="btn" data-act="close">${t('btn.cancel')}</button><button type="submit" class="btn primary">${t('btn.save')}</button></footer>`;
+  scrim.hidden=false;document.body.classList.add('locked');
+  setTimeout(()=>{const f=sheet.querySelector('.sheet-b input:not([type="checkbox"]):not([type="radio"]),.sheet-b select');if(f)f.focus()},40);
+}
+function closeModal(){scrim.hidden=true;M=null;document.body.classList.remove('locked')}
+sheet.addEventListener('submit',e=>{e.preventDefault();if(!M)return;if(M.onSubmit(sheet)===false)return;closeModal();render()});
+scrim.addEventListener('click',e=>{if(e.target===scrim)closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&M)closeModal()});
+
+const courseOpts=v=>`<option value="">${t('f.noCourse')}</option>`+S.courses.map(c=>`<option value="${c.id}" ${v===c.id?'selected':''}>${esc(c.code)} · ${esc(c.name)}</option>`).join('');
+const subRow=s=>`<li class="sub-row" data-id="${s.id}"><input type="checkbox" id="sd-${s.id}" ${s.done?'checked':''} aria-label="${t('f.stepDone')}"><input type="text" id="st-${s.id}" value="${esc(s.text)}" placeholder="${t('f.step')}" maxlength="120" aria-label="${t('f.step')}"><button type="button" class="icon-btn" data-act="rm-sub" aria-label="${t('f.removeStep')}">${ICON.x}</button></li>`;
+
+function taskModal(x,preset={}){
+  const isNew=!x;
+  x=x||{id:uid(),title:'',courseId:preset.courseId||'',type:'assignment',due:preset.due||`${ymd(addDays(new Date(),3))}T23:59`,priority:'medium',remind:+S.profile.remindLead,subtasks:[],notes:'',done:false};
+  const [dd,tt]=x.due.split('T');
+  openModal({title:t(isNew?'m.newTask':'m.editTask'),body:`
+    <label class="field"><span>${t('f.title')}</span><input type="text" id="m-title" name="title" required maxlength="120" value="${esc(x.title)}" placeholder="${t('f.titlePh')}"></label>
+    <div class="row2"><label class="field"><span>${t('f.course')}</span><select id="m-course" name="courseId">${courseOpts(x.courseId)}</select></label>
+    <label class="field"><span>${t('f.type')}</span><select id="m-type" name="type">${Object.entries(TYPES[L]).map(([k,v])=>`<option value="${k}" ${x.type===k?'selected':''}>${v}</option>`).join('')}</select></label></div>
+    <div class="row2"><label class="field"><span>${t('f.dueDate')}</span><input type="date" id="m-date" name="date" required value="${dd}"></label><label class="field"><span>${t('f.time')}</span><input type="time" id="m-time" name="time" required value="${tt}"></label></div>
+    <fieldset class="field"><legend>${t('f.priority')}</legend><div class="seg">${['low','medium','high'].map(v=>`<label><input type="radio" id="m-pr-${v}" name="priority" value="${v}" ${x.priority===v?'checked':''}><span>${PRI[L][v]}</span></label>`).join('')}</div></fieldset>
+    <label class="field"><span>${t('f.reminder')}</span><select id="m-remind" name="remind">${REMINDS[L].map(([v,l])=>`<option value="${v}" ${+x.remind===v?'selected':''}>${l}</option>`).join('')}</select></label>
+    <div class="field"><span class="lbl">${t('f.steps')}</span><ul class="subs" id="m-subs">${x.subtasks.map(subRow).join('')}</ul><div><button type="button" class="btn sm" data-act="add-sub">${ICON.plus}${t('btn.addStep')}</button></div></div>
+    <label class="field"><span>${t('f.notes')}</span><textarea id="m-notes" name="notes" rows="3" maxlength="1000">${esc(x.notes)}</textarea></label>
+    ${isNew?'':`<div><button type="button" class="lnk" data-act="focus-task" data-id="${x.id}">${t('m.focusTask')}</button></div>`}`,
+    onSubmit(f){
+      const fd=new FormData(f);
+      const subs=[...f.querySelectorAll('.sub-row')].map(r=>({id:r.dataset.id,text:r.querySelector('input[type="text"]').value.trim(),done:r.querySelector('input[type="checkbox"]').checked})).filter(s=>s.text);
+      Object.assign(x,{title:String(fd.get('title')).trim(),courseId:fd.get('courseId'),type:fd.get('type'),due:`${fd.get('date')}T${fd.get('time')}`,priority:fd.get('priority')||'medium',remind:+fd.get('remind'),notes:String(fd.get('notes')).trim(),subtasks:subs});
+      if(isNew)S.tasks.push(x);
+      save();toast(t(isNew?'toast.taskAdded':'toast.taskSaved'));
+    },
+    onDelete:isNew?null:()=>{S.tasks=S.tasks.filter(y=>y.id!==x.id);save();toast(t('toast.taskDeleted'))}
+  });
+}
+function classModal(cl,preset={}){
+  if(!S.courses.length){toast(t('toast.needCourse'));location.hash='courses';return}
+  const isNew=!cl;
+  cl=cl||{id:uid(),courseId:preset.courseId||S.courses[0].id,day:preset.day??0,p:preset.p??0,len:preset.p!=null?1:3,type:'Lecture',room:''};
+  const perOpts=(sel,useEnd)=>PERIODS.map(([s,e],i)=>`<option value="${i}" ${sel===i?'selected':''}>${i+1} · ${useEnd?e:s}</option>`).join('');
+  openModal({title:t(isNew?'m.addClass':'m.editClass'),body:`
+    <label class="field"><span>${t('f.course')}</span><select id="m-ccourse" name="courseId" required>${S.courses.map(c=>`<option value="${c.id}" ${cl.courseId===c.id?'selected':''}>${esc(c.code)} · ${esc(c.name)}</option>`).join('')}</select></label>
+    <label class="field"><span>${t('f.day')}</span><select id="m-day" name="day">${DOWL[L].slice(0,6).map((d,i)=>`<option value="${i}" ${cl.day===i?'selected':''}>${d}</option>`).join('')}</select></label>
+    <div class="row2"><label class="field"><span>${t('f.from')}</span><select id="m-pfrom" name="from">${perOpts(cl.p,false)}</select></label>
+    <label class="field"><span>${t('f.to')}</span><select id="m-pto" name="to">${perOpts(clsEnd(cl),true)}</select></label></div>
+    <fieldset class="field"><legend>${t('f.classType')}</legend><div class="seg">${Object.entries(CLASS_TYPES[L]).map(([k,v])=>`<label><input type="radio" id="m-ct-${k}" name="type" value="${k}" ${cl.type===k?'checked':''}><span>${v}</span></label>`).join('')}</div></fieldset>
+    <label class="field"><span>${t('f.room')}</span><input type="text" id="m-room" name="room" maxlength="30" value="${esc(cl.room)}" placeholder="${t('f.roomPh')}"></label>`,
+    onSubmit(f){
+      const fd=new FormData(f), day=+fd.get('day'), from=+fd.get('from'), to=+fd.get('to');
+      if(to<from){toast(t('toast.periodOrder'));return false}
+      const clash=S.classes.find(y=>y.id!==cl.id&&y.day===day&&y.p<=to&&from<=clsEnd(y));
+      if(clash){const c=course(clash.courseId);toast(t('toast.clash',{c:c?c.code:'—',d:DOWL[L][day],r:clsPer(clash)}));return false}
+      Object.assign(cl,{courseId:fd.get('courseId'),day,p:from,len:to-from+1,type:fd.get('type')||'Lecture',room:String(fd.get('room')).trim()});
+      if(isNew)S.classes.push(cl);
+      save();toast(t(isNew?'toast.classAdded':'toast.classSaved'));
+    },
+    onDelete:isNew?null:()=>{S.classes=S.classes.filter(y=>y.id!==cl.id);save();toast(t('toast.classRemoved'))}
+  });
+  /* keep "last period" from landing before "first period" */
+  const fromSel=$('#m-pfrom'), toSel=$('#m-pto');
+  fromSel.addEventListener('change',()=>{if(+toSel.value<+fromSel.value)toSel.value=fromSel.value});
+}
+function eventModal(ev,preset={}){
+  const isNew=!ev;
+  ev=ev||{id:uid(),title:'',date:preset.date||ymd(new Date()),end:'',kind:'uni'};
+  openModal({title:t(isNew?'m.newEvent':'m.editEvent'),body:`
+    <label class="field"><span>${t('f.title')}</span><input type="text" id="m-etitle" name="title" required maxlength="100" value="${esc(ev.title)}" placeholder="${t('f.eventPh')}"></label>
+    <div class="row2"><label class="field"><span>${t('f.starts')}</span><input type="date" id="m-edate" name="date" required value="${ev.date}"></label><label class="field"><span>${t('f.ends')}</span><input type="date" id="m-eend" name="end" value="${ev.end||''}"></label></div>
+    <label class="field"><span>${t('f.kind')}</span><select id="m-ekind" name="kind">${Object.entries(KINDS[L]).map(([k,v])=>`<option value="${k}" ${ev.kind===k?'selected':''}>${v}</option>`).join('')}</select></label>`,
+    onSubmit(f){
+      const fd=new FormData(f), date=fd.get('date'), end=fd.get('end');
+      if(end&&end<date){toast(t('toast.endBefore'));return false}
+      Object.assign(ev,{title:String(fd.get('title')).trim(),date,end:end&&end!==date?end:'',kind:fd.get('kind')});
+      if(isNew)S.events.push(ev);
+      calSel=date;save();toast(t(isNew?'toast.eventAdded':'toast.eventSaved'));
+    },
+    onDelete:isNew?null:()=>{S.events=S.events.filter(y=>y.id!==ev.id);save();toast(t('toast.eventDeleted'))}
+  });
+}
+function courseModal(c){
+  const isNew=!c;
+  c=c||{id:uid(),code:'',name:'',instructor:'',room:'',credits:3,color:S.courses.length%COLORS.length,notes:''};
+  openModal({title:isNew?t('m.addCourse'):t('m.editCourse',{c:esc(c.code)}),body:`
+    <div class="row2"><label class="field"><span>${t('f.code')}</span><input type="text" id="m-code" name="code" required maxlength="12" value="${esc(c.code)}" placeholder="MKT221" style="text-transform:uppercase"></label>
+    <label class="field"><span>${t('f.credits')}</span><input type="number" id="m-credits" name="credits" min="0" max="10" value="${+c.credits||0}"></label></div>
+    <label class="field"><span>${t('f.cname')}</span><input type="text" id="m-cname" name="name" required maxlength="80" value="${esc(c.name)}" placeholder="${t('f.cnamePh')}"></label>
+    <div class="row2"><label class="field"><span>${t('f.instr')}</span><input type="text" id="m-instr" name="instructor" maxlength="60" value="${esc(c.instructor)}"></label>
+    <label class="field"><span>${t('f.croom')}</span><input type="text" id="m-croom" name="room" maxlength="30" value="${esc(c.room)}"></label></div>
+    <fieldset class="field"><legend>${t('f.ccolor')}</legend><div class="swatches">${COLORS.map((col,i)=>`<label class="swatch"><input type="radio" id="m-col-${i}" name="color" value="${i}" ${+c.color===i?'checked':''} aria-label="${t('f.colorN',{n:i+1})}"><span style="--c:${col}"></span></label>`).join('')}</div></fieldset>
+    <label class="field"><span>${t('f.notes')}</span><textarea id="m-cnotes" name="notes" rows="2" maxlength="300" placeholder="${t('f.cnotesPh')}">${esc(c.notes)}</textarea></label>
+    ${isNew?'':`<div class="m-links"><button type="button" class="lnk" data-act="new-task" data-course="${c.id}">${t('m.addTaskCourse')}</button><button type="button" class="lnk" data-act="new-class" data-course="${c.id}">${t('m.addClassCourse')}</button></div>
+    <p class="hint">${t('m.courseDelHint')}</p>`}`,
+    onSubmit(f){
+      const fd=new FormData(f);
+      Object.assign(c,{code:String(fd.get('code')).trim().toUpperCase(),name:String(fd.get('name')).trim(),instructor:String(fd.get('instructor')).trim(),room:String(fd.get('room')).trim(),credits:Math.max(0,Math.min(10,+fd.get('credits')||0)),color:+fd.get('color')||0,notes:String(fd.get('notes')).trim()});
+      if(isNew)S.courses.push(c);
+      save();toast(t(isNew?'toast.courseAdded':'toast.courseSaved'));
+    },
+    onDelete:isNew?null:()=>{S.courses=S.courses.filter(y=>y.id!==c.id);S.classes=S.classes.filter(y=>y.courseId!==c.id);S.tasks.forEach(y=>{if(y.courseId===c.id)y.courseId=''});save();toast(t('toast.courseDeleted'))}
+  });
+}
+
+/* two-tap confirm for destructive actions */
+function arm(el,label,fn){
+  if(el.dataset.armed){delete el.dataset.armed;fn();return}
+  const orig=el.innerHTML;el.dataset.armed='1';el.textContent=label;
+  setTimeout(()=>{if(el.isConnected&&el.dataset.armed){delete el.dataset.armed;el.innerHTML=orig}},3500);
+}
+function clearData(){S.courses=[];S.classes=[];S.tasks=[];S.events=[];S.sessions=[];S.dismissed=[];S.isSample=false;P.courseId='';P.taskId='';save();render();toast(t('toast.cleared'))}
+function setLang(l){if(l===L)return;if(S.isSample)translateSample(L,l);L=l;S.profile.lang=l;save();render()}
+
+/* ================= events ================= */
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');if(!el)return;
+  const a=el.dataset.act, id=el.dataset.id;
+  switch(a){
+    case 'toggle':{const x=task(id);if(!x)break;x.done=!x.done;save();render();if(x.done)toast(t('toast.markedDone'));break}
+    case 'edit-task':{const x=task(id);if(x)taskModal(x);break}
+    case 'new-task':taskModal(null,{courseId:el.dataset.course||'',due:el.dataset.date?`${el.dataset.date}T23:59`:''});break;
+    case 'dismiss':{const x=task(id);if(x){S.dismissed.push(x.id+'@'+x.due);S.dismissed=S.dismissed.slice(-300);save();render()}break}
+    case 'tf-status':TF.status=el.dataset.v;render();break;
+    case 'cal-prev':calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);render();break;
+    case 'cal-next':calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);render();break;
+    case 'cal-today':{const n=new Date();calM=new Date(n.getFullYear(),n.getMonth(),1);calSel=ymd(n);render();break}
+    case 'cal-sel':{calSel=el.dataset.v;const d=parseYMD(calSel);if(d.getMonth()!==calM.getMonth())calM=new Date(d.getFullYear(),d.getMonth(),1);render();break}
+    case 'new-event':eventModal(null,{date:el.dataset.date});break;
+    case 'edit-event':{const ev=S.events.find(y=>y.id===id);if(ev)eventModal(ev);break}
+    case 'new-class':classModal(null,{day:el.dataset.day!=null?+el.dataset.day:undefined,p:el.dataset.p!=null?+el.dataset.p:undefined,courseId:el.dataset.course});break;
+    case 'edit-class':{const cl=S.classes.find(y=>y.id===id);if(cl)classModal(cl);break}
+    case 'new-course':courseModal(null);break;
+    case 'edit-course':{const c=course(id);if(c)courseModal(c);break}
+    case 'add-sub':{const ul=$('#m-subs');ul.insertAdjacentHTML('beforeend',subRow({id:uid(),text:'',done:false}));ul.lastElementChild.querySelector('input[type="text"]').focus();break}
+    case 'rm-sub':el.closest('.sub-row').remove();break;
+    case 'focus-task':{const x=task(id);if(x){P.courseId=x.courseId||'';P.taskId=x.id}closeModal();if(view==='focus')render();else location.hash='focus';break}
+    case 'close':closeModal();break;
+    case 'm-delete':if(M&&M.onDelete)arm(el,t('arm.delete'),()=>{M.onDelete();closeModal();render()});break;
+    case 'pmode':P.running=false;dropWake();P.mode=el.dataset.v;P.remaining=modeLen(P.mode);render();break;
+    case 'pstart':
+      if(P.running){P.remaining=pRemaining();P.running=false;dropWake()}
+      else{ensureAudio();if(!(P.remaining>0))P.remaining=modeLen(P.mode);P.endAt=Date.now()+P.remaining*1000;P.running=true;holdWake()}
+      updateFocusUI();break;
+    case 'preset':P.running=false;dropWake();P.remaining=modeLen(P.mode);updateFocusUI();break;
+    case 'pskip':nextMode(false);render();break;
+    case 'accent':S.profile.accent=el.dataset.v;save();applyTheme();markAccent();break;
+    case 'darkbg':S.profile.darkBg=el.dataset.v;save();render();break;
+    case 'lightbg':S.profile.lightBg=el.dataset.v;save();render();break;
+    case 'sound':S.profile.sound=el.dataset.v==='1';save();render();break;
+    case 'test-sound':ensureAudio();chime();break;
+    case 'notif-on':enableNotif();break;
+    case 'notif-off':S.profile.notify=false;save();render();break;
+    case 'notif-test':sysNotify(t('notif.title'),t('notif.sample'),'ufe-test');break;
+    case 'theme':S.profile.theme=el.dataset.v;save();render();break;
+    case 'lang':setLang(el.dataset.v);break;
+    case 'hide-banner':S.bannerHidden=true;save();render();break;
+    case 'clear-data':arm(el,t('arm.clear'),clearData);break;
+    case 'load-sample':arm(el,t('arm.replace'),()=>{const pr=S.profile;S=seed(L);S.profile=pr;save();render();toast(t('toast.sample'))});break;
+    case 'copy-backup':{
+      const txt=JSON.stringify(S), box=$('#backup-box');
+      const fallback=()=>{box.hidden=false;box.value=txt;box.focus();box.select();toast(t('toast.select'))};
+      try{navigator.clipboard.writeText(txt).then(()=>toast(t('toast.copied')),fallback)}catch(err){fallback()}
+      break;
+    }
+    case 'restore':{
+      const v=$('#restore-box').value.trim();
+      try{const o=JSON.parse(v);if(!o||!Array.isArray(o.tasks)||!Array.isArray(o.courses))throw new Error('bad');S=normalize(o);L=S.profile.lang;save();render();toast(t('toast.restored'))}
+      catch(err){toast(t('toast.badBackup'))}
+      break;
+    }
+  }
+});
+function pickCustom(v){if(!validHex(v))return;S.profile.customColor=v;S.profile.accent='custom';applyTheme();markAccent()}
+document.addEventListener('input',e=>{if(e.target.id==='pf-color')pickCustom(e.target.value)});
+document.addEventListener('change',e=>{
+  const el=e.target, k=el.dataset.change;if(!k)return;
+  if(k==='color'){pickCustom(el.value);save();toast(t('toast.accent'))}
+  else if(k==='tf-course'){TF.course=el.value;render()}
+  else if(k==='tf-type'){TF.type=el.value;render()}
+  else if(k==='p-course'){P.courseId=el.value;P.taskId='';render()}
+  else if(k==='p-task'){P.taskId=el.value}
+  else if(k==='pref'){
+    const path=el.dataset.k.split('.');let val=el.value;
+    if(el.type==='number'){const mn=+el.min,mx=+el.max;val=Math.round(+val);if(isNaN(val))val=mn;val=Math.max(mn,Math.min(mx,val));el.value=val}
+    if(path[0]==='remindLead')val=+val;
+    let o=S.profile;for(let i=0;i<path.length-1;i++)o=o[path[i]];o[path[path.length-1]]=val;
+    if(path[0]==='pomo'&&!P.running)P.remaining=modeLen(P.mode);
+    save();updateBadges();toast(t('toast.saved'));
+  }
+});
+
+/* ================= clocks ================= */
+setInterval(()=>{if(P.running){if(Date.now()>=P.endAt){chime();nextMode(true);if(view==='focus')render()}updateFocusUI()}},250);
+const seenRem=new Set(activeReminders().map(x=>x.id));
+setInterval(()=>{
+  activeReminders().forEach(x=>{if(!seenRem.has(x.id)){seenRem.add(x.id);const d=dueInfo(x).label;toast(t('toast.reminder',{t:x.title,d}));
+    if(S.profile.sound)chime();
+    if(notifState()==='on')sysNotify(t('notif.title'),t('notif.body',{t:x.title,d}),'ufe-rem-'+x.id);if(view==='today'&&!M)render()}});
+  updateBadges();
+},30000);
+
+route();
+})();
+</script>
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
+</body>
+</html>
