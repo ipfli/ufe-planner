@@ -1,4 +1,4 @@
 window.UFE_CONFIG = {
   supabaseUrl: 'https://jtnkmmgspfmbwxbkcfap.supabase.co',
-  supabaseAnonKey: 'PASTE_KEY_HERE'
+  supabaseAnonKey: 'sb_publishable_NVcKA6dkYlAZUjMa4LeHPg_PKA4PHSS'
 };
