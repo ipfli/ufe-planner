@@ -12,6 +12,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="UFE Planner">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.1"></script>
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>UFE Academic Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -362,7 +364,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);
 .backup{font-size:12px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace}
 
 /* ---------- modal ---------- */
-.scrim{position:fixed;inset:0;z-index:50;background:rgba(8,10,16,.45);display:flex;align-items:flex-end;justify-content:center;padding:env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px)}
+.scrim{position:fixed;inset:0;z-index:80;background:rgba(8,10,16,.45);display:flex;align-items:flex-end;justify-content:center;padding:env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px)}
 .sheet{background:var(--canvas);width:100%;max-width:540px;max-height:92vh;display:flex;flex-direction:column;border-radius:16px 16px 0 0;border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.25);margin:0}
 .sheet-h{display:flex;justify-content:space-between;align-items:center;padding:18px 22px 4px}
 .sheet-h h2{font-size:17px}
@@ -412,6 +414,12 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);
 .ob-hint{display:block;font-size:12.5px;color:var(--muted);line-height:1.45}
 .ob-hint.bad{color:var(--bad)}
 .ob-skip{align-self:center;color:var(--muted)}
+.ob-alt{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.md-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5}
+.md-steps a{color:var(--accent);font-weight:500}
+.tag-md{font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:0 6px;border-radius:4px;line-height:1.6}
+.sync-line{display:flex;align-items:center;gap:6px}
+.sync-line::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--good)}
 .ob .ch{display:inline-block;animation:obRise .7s cubic-bezier(.2,.75,.2,1) both;animation-delay:var(--d,0s)}
 .rise{animation:obRise .6s cubic-bezier(.2,.75,.2,1) both;animation-delay:var(--d,0s)}
 @keyframes obRise{from{opacity:0;transform:translateY(14px)}}
@@ -422,7 +430,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);
 @keyframes obDrawC{from{stroke-dashoffset:151}}
 @keyframes obDrawP{from{stroke-dashoffset:36}}
 
-.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom, 0px));transform:translate(-50%,8px);background:var(--fg);color:var(--canvas);padding:10px 16px;border-radius:9px;font-size:13.5px;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:calc(100% - 32px);text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom, 0px));transform:translate(-50%,8px);background:var(--fg);color:var(--canvas);padding:10px 16px;border-radius:9px;font-size:13.5px;z-index:90;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:calc(100% - 32px);text-align:center}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 @media (min-width:900px){.toast{bottom:28px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -549,7 +557,7 @@ en:{
  'notif.title':'UFE Planner reminder','notif.body':'{t} is due {d}','notif.sample':'This is how your reminders will look.','toast.notifOn':'Notifications are on',
  'ob.hello':'Hello!','ob.welcome':'Welcome to UFE Planner. Your classes, deadlines and study time, all in one place.',
  'ob.f1':'Your timetable in UFE periods, 07:40 to 20:10','ob.f2':'Deadlines and exams with reminders','ob.f3':'A focus timer for study sessions','ob.start':'Get started',
- 'ob.aboutH':'Tell us about yourself','ob.aboutP':'This sets up your greeting, program and year. You can change it any time in Settings.',
+ 'ob.aboutH':'Tell us about yourself','ob.aboutP':'You can change this any time in Settings.',
  'ob.name':'Your name','ob.namePh':'e.g. Anujin','ob.program':'Program','ob.programPick':'Choose your program','ob.other':'Other (type it in)','ob.otherPh':'Type your program',
  'ob.code':'Student code','ob.codePh':'e.g. b26fa1234','ob.codeHint':'Your year is worked out from the code: this academic year b26… is 1st year, b25… is 2nd year, and so on.',
  'ob.codeOk':'{y} · started in {a}','ob.codeBad':'That doesn’t look like a student code. It should look like b26fa1234.','ob.orYear':'Or choose your year',
@@ -558,6 +566,25 @@ en:{
  'go.h':'Get started','go.1':'Add your courses','go.2':'Place your classes in the timetable','go.3':'Add your first assignment or exam',
  'pf.code':'Student code','pf.codeD':'Used to work out your year of study.','pf.programOther':'Your program',
  'pf.replay':'Welcome screen','pf.replayD':'Show the first-time welcome and setup again.','btn.replay':'Show welcome screen','toast.codeBad':'That doesn’t look like a student code, e.g. b26fa1234',
+ 'sec.account':'Account and Moodle','acc.label':'Account','acc.h':'Save your planner to an account','acc.p':'Sign in to use the same planner on your phone, laptop and any other device.',
+ 'acc.new':'Create account','acc.signin':'Sign in','acc.email':'Email','acc.pass':'Password','acc.passHint':'At least 6 characters. Make a new password. Don’t reuse your UFE, Moodle or Infosys password.',
+ 'acc.skip':'Continue without an account','acc.skipNote':'Your planner will only be saved on this device.','acc.forgot':'Forgot password?','acc.resetSent':'Check your email for a link to set a new password.',
+ 'acc.newPass':'Set a new password','acc.newPassBtn':'Save new password','acc.working':'Please wait…','acc.signedAs':'Signed in as {e}','acc.synced':'synced {t}','acc.syncNow':'Sync now',
+ 'acc.signout':'Sign out','acc.signoutD':'Signing out removes the planner from this device. It stays safe in your account.','acc.none':'Not signed in. Your planner is saved on this device only.',
+ 'acc.open':'Sign in or create account','acc.unavail':'Accounts aren’t set up for this copy of the planner yet.','acc.preview':'Sign-in works on the planner’s own website, not in this preview.',
+ 'sync.ok':'Synced','sync.syncing':'Syncing…','sync.offline':'Offline. Changes will sync when you’re back online.','sync.error':'Sync failed. It will try again.','sync.local':'Saved on this device',
+ 'rel.now':'just now','rel.min':'{n} min ago','pick.h':'Which planner should we keep?','pick.p':'Your account already has a planner, and this device has a different one. The one you don’t pick will be replaced.',
+ 'pick.remote':'Use my account’s planner','pick.local':'Keep this device’s planner',
+ 'err.badLogin':'Email or password is wrong.','err.exists':'An account with this email already exists. Sign in instead.','err.weak':'Password must be at least 6 characters.',
+ 'err.confirm':'Check your email to confirm your account, then sign in.','err.net':'Can’t reach the server. Check your internet connection.','err.generic':'Something went wrong: {m}','err.missing':'Enter your email and password.',
+ 'md.h':'Connect Moodle','md.p':'Your Moodle assignment and quiz deadlines appear in the planner automatically, with reminders. No Moodle password needed.',
+ 'md.s1':'Open the Moodle export page: <a href="https://online.ufe.edu.mn/calendar/export.php" target="_blank" rel="noopener">online.ufe.edu.mn/calendar/export.php</a> (sign in to Moodle if asked).',
+ 'md.s2':'Under “Events to export” choose <b>All</b>, and under “Time period” choose <b>Recent and next 60 days</b>.','md.s3':'Click <b>Get calendar URL</b> and copy the link that appears.','md.s4':'Paste it below.',
+ 'md.url':'Moodle calendar link','md.urlPh':'https://online.ufe.edu.mn/calendar/export_execute.php?…','md.connect':'Connect',
+ 'md.bad':'This isn’t a Moodle calendar link. It should start with https://online.ufe.edu.mn/calendar/export_execute.php','md.fail':'Couldn’t read your Moodle calendar. Check the link and try again.',
+ 'md.done':'{n} deadlines from Moodle','md.needAcc':'Sign in to an account first. Moodle deadlines update in the background through your account.','md.taskNote':'The title and due date update from Moodle automatically.',
+ 'md.status':'Connected · updated {t} · {n} deadlines','md.update':'Update now','md.change':'Change link','md.disconnect':'Disconnect','md.disconnectD':'Deadlines already imported stay in your planner.',
+ 'toast.signedIn':'Signed in. Your planner now syncs across devices.','toast.signedOut':'Signed out','toast.restored2':'Your planner was loaded from your account','toast.passSaved':'Password updated','arm.signout':'Tap again to sign out',
  'pf.semStart':'First day of semester','pf.semStartD':'Used to show the current teaching week.','pf.semLen':'Semester length','pf.remind':'Default reminder','pf.remindD':'Applied to each new task. You can change it per task.',
  'pf.work':'Focus round','pf.short':'Short break','pf.long':'Long break','pf.rounds':'Long break after','u.min':'minutes','u.weeks':'weeks','u.rounds':'rounds',
  'pf.backup':'Backup','pf.backupD':'Your planner is saved in this browser only. Copy a backup to move it to another device.','btn.copyBackup':'Copy backup','backupText':'Backup text',
@@ -609,7 +636,7 @@ mn:{
  'notif.title':'UFE Төлөвлөгч — сануулга','notif.body':'{t} — {d}','notif.sample':'Таны сануулга ингэж харагдана.','toast.notifOn':'Мэдэгдэл асаалаа',
  'ob.hello':'Сайн уу!','ob.welcome':'UFE Төлөвлөгчид тавтай морил. Хичээл, даалгавар, суралцах цагаа нэг дороос.',
  'ob.f1':'UFE-ийн пар бүхий хуваарь, 07:40–20:10','ob.f2':'Сануулгатай даалгавар, шалгалт','ob.f3':'Суралцах цагийн төвлөрлийн таймер','ob.start':'Эхлэх',
- 'ob.aboutH':'Өөрийнхөө тухай','ob.aboutP':'Мэндчилгээ, мэргэжил, курсээ тохируулна. Дараа нь Тохиргооноос хүссэн үедээ өөрчилж болно.',
+ 'ob.aboutH':'Өөрийнхөө тухай','ob.aboutP':'Тохиргооноос хүссэн үедээ өөрчилж болно.',
  'ob.name':'Таны нэр','ob.namePh':'ж.нь: Анужин','ob.program':'Мэргэжил','ob.programPick':'Мэргэжлээ сонгоно уу','ob.other':'Бусад (өөрөө бичих)','ob.otherPh':'Мэргэжлээ бичнэ үү',
  'ob.code':'Оюутны код','ob.codePh':'ж.нь: b26fa1234','ob.codeHint':'Курсийг кодоос тань тодорхойлно: энэ хичээлийн жилд b26… бол 1-р курс, b25… бол 2-р курс гэх мэт.',
  'ob.codeOk':'{y} · {a} онд элссэн','ob.codeBad':'Оюутны код биш бололтой. Жишээ нь: b26fa1234.','ob.orYear':'Эсвэл курсээ сонгох',
@@ -618,6 +645,25 @@ mn:{
  'go.h':'Эхлэх алхмууд','go.1':'Хичээлүүдээ нэмэх','go.2':'Хичээлүүдээ хуваарьт байрлуулах','go.3':'Анхны бие даалт, шалгалтаа нэмэх',
  'pf.code':'Оюутны код','pf.codeD':'Курсийг тань тооцоолоход ашиглана.','pf.programOther':'Таны мэргэжил',
  'pf.replay':'Мэндчилгээний дэлгэц','pf.replayD':'Анх нээхэд гардаг мэндчилгээ, тохиргоог дахин харуулах.','btn.replay':'Мэндчилгээг харуулах','toast.codeBad':'Оюутны код буруу байна, ж.нь: b26fa1234',
+ 'sec.account':'Бүртгэл ба Moodle','acc.label':'Бүртгэл','acc.h':'Төлөвлөгчөө бүртгэлдээ хадгалах','acc.p':'Нэвтэрснээр утас, зөөврийн компьютер болон бусад төхөөрөмж дээрээ ижил төлөвлөгч ашиглана.',
+ 'acc.new':'Бүртгүүлэх','acc.signin':'Нэвтрэх','acc.email':'И-мэйл','acc.pass':'Нууц үг','acc.passHint':'Хамгийн багадаа 6 тэмдэгт. Шинэ нууц үг зохионо уу. UFE, Moodle, Infosys-ийн нууц үгээ бүү ашиглаарай.',
+ 'acc.skip':'Бүртгэлгүйгээр үргэлжлүүлэх','acc.skipNote':'Таны мэдээлэл зөвхөн энэ төхөөрөмж дээр хадгалагдана.','acc.forgot':'Нууц үгээ мартсан уу?','acc.resetSent':'Шинэ нууц үг тохируулах холбоосыг и-мэйлээсээ шалгана уу.',
+ 'acc.newPass':'Шинэ нууц үг тохируулах','acc.newPassBtn':'Шинэ нууц үг хадгалах','acc.working':'Түр хүлээнэ үү…','acc.signedAs':'{e} хаягаар нэвтэрсэн','acc.synced':'{t} синк хийсэн','acc.syncNow':'Одоо синк хийх',
+ 'acc.signout':'Гарах','acc.signoutD':'Гарахад төлөвлөгч энэ төхөөрөмжөөс арилна. Таны бүртгэлд аюулгүй хадгалагдсан хэвээр байна.','acc.none':'Нэвтрээгүй байна. Төлөвлөгч зөвхөн энэ төхөөрөмж дээр хадгалагдаж байна.',
+ 'acc.open':'Нэвтрэх эсвэл бүртгүүлэх','acc.unavail':'Энэ хувилбарт бүртгэл хараахан тохируулагдаагүй байна.','acc.preview':'Нэвтрэх нь энэ урьдчилсан харагдац дээр биш, төлөвлөгчийн вэбсайт дээр ажиллана.',
+ 'sync.ok':'Синк хийгдсэн','sync.syncing':'Синк хийж байна…','sync.offline':'Интернэтгүй байна. Холбогдмогц синк хийнэ.','sync.error':'Синк амжилтгүй. Дахин оролдоно.','sync.local':'Энэ төхөөрөмж дээр хадгалагдсан',
+ 'rel.now':'дөнгөж сая','rel.min':'{n} минутын өмнө','pick.h':'Аль төлөвлөгчийг үлдээх вэ?','pick.p':'Таны бүртгэлд төлөвлөгч хадгалагдсан байна, энэ төхөөрөмж дээр өөр төлөвлөгч байна. Сонгоогүй нь солигдоно.',
+ 'pick.remote':'Бүртгэлийнхээ төлөвлөгчийг ашиглах','pick.local':'Энэ төхөөрөмжийнхийг үлдээх',
+ 'err.badLogin':'И-мэйл эсвэл нууц үг буруу байна.','err.exists':'Энэ и-мэйлээр бүртгэл үүссэн байна. Нэвтэрнэ үү.','err.weak':'Нууц үг хамгийн багадаа 6 тэмдэгт байна.',
+ 'err.confirm':'И-мэйлээ шалгаж бүртгэлээ баталгаажуулаад нэвтэрнэ үү.','err.net':'Сервертэй холбогдож чадсангүй. Интернэтээ шалгана уу.','err.generic':'Алдаа гарлаа: {m}','err.missing':'И-мэйл, нууц үгээ оруулна уу.',
+ 'md.h':'Moodle холбох','md.p':'Moodle дээрх даалгавар, шалгалтын хугацаа сануулгатайгаар төлөвлөгчид автоматаар орж ирнэ. Moodle-ийн нууц үг шаардлагагүй.',
+ 'md.s1':'Moodle-ийн экспорт хуудсыг нээнэ: <a href="https://online.ufe.edu.mn/calendar/export.php" target="_blank" rel="noopener">online.ufe.edu.mn/calendar/export.php</a> (шаардвал Moodle-дээ нэвтэрнэ).',
+ 'md.s2':'Экспортлох үйл явдлаас <b>Бүгд (All)</b>, хугацаанаас <b>Сүүлийн болон дараагийн 60 хоног (Recent and next 60 days)</b>-ийг сонгоно.','md.s3':'<b>Календарийн URL авах (Get calendar URL)</b> дээр дарж гарч ирсэн холбоосыг хуулна.','md.s4':'Холбоосоо доор буулгана.',
+ 'md.url':'Moodle календарийн холбоос','md.urlPh':'https://online.ufe.edu.mn/calendar/export_execute.php?…','md.connect':'Холбох',
+ 'md.bad':'Энэ Moodle-ийн календарийн холбоос биш байна. https://online.ufe.edu.mn/calendar/export_execute.php гэж эхэлнэ.','md.fail':'Moodle календарийг уншиж чадсангүй. Холбоосоо шалгаад дахин оролдоно уу.',
+ 'md.done':'Moodle-оос {n} даалгавар','md.needAcc':'Эхлээд бүртгэлдээ нэвтэрнэ үү. Moodle-ийн хугацаанууд бүртгэлээр дамжин шинэчлэгдэнэ.','md.taskNote':'Гарчиг, хугацаа нь Moodle-оос автоматаар шинэчлэгдэнэ.',
+ 'md.status':'Холбогдсон · {t} шинэчилсэн · {n} даалгавар','md.update':'Одоо шинэчлэх','md.change':'Холбоос солих','md.disconnect':'Салгах','md.disconnectD':'Орж ирсэн даалгаврууд төлөвлөгчид үлдэнэ.',
+ 'toast.signedIn':'Нэвтэрлээ. Төлөвлөгч бүх төхөөрөмж дээр синк хийгдэнэ.','toast.signedOut':'Гарлаа','toast.restored2':'Төлөвлөгчийг бүртгэлээс ачааллаа','toast.passSaved':'Нууц үг шинэчлэгдлээ','arm.signout':'Гарах бол дахин дарна уу',
  'pf.semStart':'Улирлын эхний өдөр','pf.semStartD':'Хэддүгээр долоо хоног болохыг тооцоход ашиглана.','pf.semLen':'Улирлын үргэлжлэх хугацаа','pf.remind':'Үндсэн сануулга','pf.remindD':'Шинэ даалгавар бүрт хэрэглэгдэнэ. Даалгавар тус бүр дээр өөрчилж болно.',
  'pf.work':'Төвлөрөх хугацаа','pf.short':'Богино завсарлага','pf.long':'Урт завсарлага','pf.rounds':'Урт завсарлага авах','u.min':'минут','u.weeks':'долоо хоног','u.rounds':'үеийн дараа',
  'pf.backup':'Нөөц','pf.backupD':'Таны мэдээлэл зөвхөн энэ хөтөч дээр хадгалагдана. Өөр төхөөрөмж рүү шилжүүлэхдээ нөөцөө хуулна уу.','btn.copyBackup':'Нөөц хуулах','backupText':'Нөөц текст',
@@ -750,7 +796,7 @@ function translateSample(from,to){
 }
 
 /* ================= state ================= */
-function defaults(){return {ver:2,profile:{name:'',program:'',programOther:'',code:'',admitYear:0,onboarded:false,lang:'',accent:'navy',customColor:'',theme:'system',darkBg:'charcoal',lightBg:'grey',sound:true,notify:false,remindLead:24,pomo:{work:25,short:5,long:15,rounds:4},semStart:'2026-09-01',semWeeks:16},courses:[],classes:[],tasks:[],events:[],sessions:[],dismissed:[],isSample:false,bannerHidden:false}}
+function defaults(){return {ver:2,updatedAt:0,profile:{name:'',program:'',programOther:'',code:'',admitYear:0,onboarded:false,moodleUrl:'',moodleAt:0,lang:'',accent:'navy',customColor:'',theme:'system',darkBg:'charcoal',lightBg:'grey',sound:true,notify:false,remindLead:24,pomo:{work:25,short:5,long:15,rounds:4},semStart:'2026-09-01',semWeeks:16},courses:[],classes:[],tasks:[],events:[],sessions:[],dismissed:[],isSample:false,bannerHidden:false}}
 const browserLang=()=>{try{if(/^Asia\/(Ulaanbaatar|Hovd|Choibalsan)$/.test(Intl.DateTimeFormat().resolvedOptions().timeZone))return 'mn'}catch(e){}return /^mn/i.test(navigator.language||'')?'mn':'en'};
 function normalize(s){
   const d=defaults(), raw=s.profile||{};
@@ -781,7 +827,7 @@ function normalize(s){
 function load(){let s=null;try{const r=localStorage.getItem(KEY);if(r)s=JSON.parse(r)}catch(e){}
   if(!s||!Array.isArray(s.tasks)){s=defaults();s.profile.lang=browserLang()}
   return normalize(s)}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){S.updatedAt=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}queuePush()}
 let S=load();
 L=S.profile.lang;
 
@@ -868,7 +914,7 @@ const NAVI={today:ICON.home,tasks:ICON.tasks,calendar:ICON.cal,timetable:ICON.gr
 /* ================= shared pieces ================= */
 function taskRow(x){
   const c=course(x.courseId), di=dueInfo(x), st=x.subtasks||[], sd=st.filter(s=>s.done).length;
-  const meta=[c?`<span class="code"><i class="dot"></i>${esc(c.code)}</span>`:'',`<span>${typeName(x.type)}</span>`,st.length?`<span>${t('task.steps',{a:sd,b:st.length})}</span>`:'',x.priority==='high'&&!x.done?`<span class="hi">${t('task.high')}</span>`:''].join('');
+  const meta=[x.src==='moodle'?`<span><b class="tag-md">Moodle</b></span>`:'',c?`<span class="code"><i class="dot"></i>${esc(c.code)}</span>`:(x.moodleCourse?`<span>${esc(x.moodleCourse)}</span>`:''),`<span>${typeName(x.type)}</span>`,st.length?`<span>${t('task.steps',{a:sd,b:st.length})}</span>`:'',x.priority==='high'&&!x.done?`<span class="hi">${t('task.high')}</span>`:''].join('');
   return `<li class="task ${x.done?'is-done':''}" style="--cc:${cc(c)}">
     <button class="check" data-act="toggle" data-id="${x.id}" aria-label="${x.done?t('task.markOpen'):t('task.markDone')}: ${esc(x.title)}" aria-pressed="${x.done}">${ICON.check}</button>
     <button class="task-main" data-act="edit-task" data-id="${x.id}"><span class="task-title">${esc(x.title)}</span><span class="task-meta">${meta}</span></button>
@@ -1105,7 +1151,14 @@ function vPrefs(){
     <span class="acc-name" id="acc-name">${esc(accentName())}</span>`;
   const bgList=(set,act,cur)=>`<div class="bgopts">${Object.entries(set).map(([k,v])=>`<button class="bgopt" data-act="${act}" data-v="${k}" aria-pressed="${cur===k}"><i style="--a:${v[2][0]};--b:${v[2][1]}"></i>${v[LI()]}</button>`).join('')}</div>`;
   const bgs=bgList(DARKBG,'darkbg',q.darkBg), lbgs=bgList(LIGHTBG,'lightbg',q.lightBg);
+  const accRow=!sb?row(t('acc.label'),window.self!==window.top?t('acc.preview'):t('acc.unavail'),'')
+    :user?row(t('acc.label'),`<span id="acc-status">${esc(accStatusText())}</span>`,`<button class="btn sm" data-act="sync-now">${t('acc.syncNow')}</button><button class="btn sm danger" data-act="sign-out">${t('acc.signout')}</button><p class="hint" style="width:100%">${t('acc.signoutD')}</p>`)
+    :row(t('acc.label'),t('acc.none'),`<button class="btn sm primary" data-act="auth-open">${t('acc.open')}</button>`);
+  const mdRow=!sb||!user?row('Moodle',t('md.needAcc'),'')
+    :q.moodleUrl?row('Moodle',t('md.status',{t:relTime(q.moodleAt),n:mdCount()}),`<button class="btn sm" data-act="md-update">${t('md.update')}</button><button class="btn sm" data-act="md-open">${t('md.change')}</button><button class="btn sm danger" data-act="md-off">${t('md.disconnect')}</button><p class="hint" style="width:100%">${t('md.disconnectD')}</p>`)
+    :row('Moodle',t('md.p'),`<button class="btn sm primary" data-act="md-open">${t('md.connect')}</button>`);
   return `${head(t('prefs.kicker'),t('prefs.title'))}
+  <section class="set"><h2>${t('sec.account')}</h2>${accRow}${mdRow}</section>
   <section class="set"><h2>${t('sec.appearance')}</h2>
     ${row(t('pf.lang'),t('pf.langD'),langSeg())}
     ${row(t('pf.accent'),t('pf.accentD'),swatches)}
@@ -1161,7 +1214,7 @@ function updateBadges(){
   document.querySelectorAll('[data-badge="today"]').forEach(b=>{b.hidden=!n;if(b.classList.contains('nav-n')){b.textContent=n;b.setAttribute('aria-label',t('attn',{n}))}});
   const q=S.profile, si=semInfo(now);
   const who=[q.name.trim(),yearLabel(studyYear()),progName()].filter(Boolean).join(' · ');
-  $('#side-foot').innerHTML=`${who?`<b>${esc(who)}</b>`:''}<div class="sem"><span>${esc(si.label)}</span><span class="num">${Math.round(si.frac*100)}%</span></div><div class="sem-bar"><i style="width:${si.frac*100}%"></i></div><div class="side-lang">${langSeg('xs')}</div><span class="disclaimer">${t('disclaimer')}</span>`;
+  $('#side-foot').innerHTML=`${who?`<b>${esc(who)}</b>`:''}<div class="sem"><span>${esc(si.label)}</span><span class="num">${Math.round(si.frac*100)}%</span></div><div class="sem-bar"><i style="width:${si.frac*100}%"></i></div>${user?`<span class="sync-line" id="sync-line">${t('sync.'+syncState)}</span>`:''}<div class="side-lang">${langSeg('xs')}</div><span class="disclaimer">${t('disclaimer')}</span>`;
   updateFocusUI();
 }
 function render(){
@@ -1190,8 +1243,8 @@ function openModal(o){
 }
 function closeModal(){scrim.hidden=true;M=null;document.body.classList.remove('locked')}
 sheet.addEventListener('submit',e=>{e.preventDefault();if(!M)return;if(M.onSubmit(sheet)===false)return;closeModal();render()});
-scrim.addEventListener('click',e=>{if(e.target===scrim)closeModal()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&M)closeModal()});
+scrim.addEventListener('click',e=>{if(e.target===scrim&&!(M&&M.lock))closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&M&&!M.lock)closeModal()});
 
 const courseOpts=v=>`<option value="">${t('f.noCourse')}</option>`+S.courses.map(c=>`<option value="${c.id}" ${v===c.id?'selected':''}>${esc(c.code)} · ${esc(c.name)}</option>`).join('');
 const subRow=s=>`<li class="sub-row" data-id="${s.id}"><input type="checkbox" id="sd-${s.id}" ${s.done?'checked':''} aria-label="${t('f.stepDone')}"><input type="text" id="st-${s.id}" value="${esc(s.text)}" placeholder="${t('f.step')}" maxlength="120" aria-label="${t('f.step')}"><button type="button" class="icon-btn" data-act="rm-sub" aria-label="${t('f.removeStep')}">${ICON.x}</button></li>`;
@@ -1200,7 +1253,7 @@ function taskModal(x,preset={}){
   const isNew=!x;
   x=x||{id:uid(),title:'',courseId:preset.courseId||'',type:'assignment',due:preset.due||`${ymd(addDays(new Date(),3))}T23:59`,priority:'medium',remind:+S.profile.remindLead,subtasks:[],notes:'',done:false};
   const [dd,tt]=x.due.split('T');
-  openModal({title:t(isNew?'m.newTask':'m.editTask'),body:`
+  openModal({title:t(isNew?'m.newTask':'m.editTask'),body:`${x.src==='moodle'?`<p class="hint" style="margin:0"><b class="tag-md">Moodle</b> ${t('md.taskNote')}</p>`:''}
     <label class="field"><span>${t('f.title')}</span><input type="text" id="m-title" name="title" required maxlength="120" value="${esc(x.title)}" placeholder="${t('f.titlePh')}"></label>
     <div class="row2"><label class="field"><span>${t('f.course')}</span><select id="m-course" name="courseId">${courseOpts(x.courseId)}</select></label>
     <label class="field"><span>${t('f.type')}</span><select id="m-type" name="type">${Object.entries(TYPES[L]).map(([k,v])=>`<option value="${k}" ${x.type===k?'selected':''}>${v}</option>`).join('')}</select></label></div>
@@ -1296,13 +1349,222 @@ function arm(el,label,fn){
 function clearData(){S.courses=[];S.classes=[];S.tasks=[];S.events=[];S.sessions=[];S.dismissed=[];S.isSample=false;P.courseId='';P.taskId='';save();render();toast(t('toast.cleared'))}
 function setLang(l){if(l===L)return;if(S.isSample)translateSample(L,l);L=l;S.profile.lang=l;save();render();if(!obEl.hidden)obRender()}
 
+/* ================= accounts and sync (Supabase) ================= */
+const CFG=window.UFE_CONFIG||{};
+let sb=null, user=null, syncState='local', syncing=false, pushTimer=0;
+try{if(CFG.supabaseUrl&&CFG.supabaseAnonKey&&window.supabase&&window.self===window.top)sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}})}catch(e){sb=null}
+const META_KEY='ufe-planner-sync';
+let META={};try{META=JSON.parse(localStorage.getItem(META_KEY)||'{}')||{}}catch(e){META={}}
+function saveMeta(){try{localStorage.setItem(META_KEY,JSON.stringify(META))}catch(e){}}
+function storeLocal(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const hasData=s=>!s.isSample&&!!(s.courses.length||s.tasks.length||s.classes.length||s.events.length);
+function relTime(ms){
+  if(!ms)return '—';const d=Date.now()-ms;
+  if(d<60000)return t('rel.now');if(d<3600000)return t('rel.min',{n:Math.floor(d/60000)});
+  const x=new Date(ms), hm=`${pad(x.getHours())}:${pad(x.getMinutes())}`;
+  return startOfDay(x).getTime()===startOfDay(new Date()).getTime()?hm:`${shortDate(ymd(x))} ${hm}`;
+}
+function accStatusText(){return user?`${t('acc.signedAs',{e:user.email||''})} · ${syncState==='ok'?t('acc.synced',{t:relTime(META.at)}):t('sync.'+syncState)}`:''}
+function setSync(st){
+  syncState=st;
+  const a=$('#sync-line');if(a)a.textContent=user?t('sync.'+st):'';
+  const b=$('#acc-status');if(b)b.textContent=accStatusText();
+}
+async function remoteGet(){const {data,error}=await sb.from('planner_state').select('data,updated_at').eq('user_id',user.id).maybeSingle();if(error)throw error;return data}
+async function remotePut(){if(!S.updatedAt)S.updatedAt=Date.now();const {error}=await sb.from('planner_state').upsert({user_id:user.id,data:S,updated_at:new Date(S.updatedAt).toISOString()});if(error)throw error}
+function applyRemote(data){S=normalize(data);L=S.profile.lang;storeLocal();render()}
+/* whole-planner sync: whichever copy was changed last wins */
+async function syncNow(){
+  if(!sb||!user||syncing)return;
+  syncing=true;setSync('syncing');
+  try{
+    const r=await remoteGet(), rU=r?Date.parse(r.updated_at):0, lU=S.updatedAt||0;
+    if(r&&rU>lU){if(!M&&obEl.hidden)applyRemote(r.data)}
+    else if(!r||lU>rU)await remotePut();
+    META.at=Date.now();META.uid=user.id;saveMeta();setSync('ok');
+  }catch(e){setSync(navigator.onLine===false?'offline':'error')}
+  syncing=false;
+}
+function queuePush(){if(!sb||!user)return;clearTimeout(pushTimer);pushTimer=setTimeout(syncNow,1500)}
+/* small two-or-more-button question that must be answered */
+function choose(title,text,opts){return new Promise(res=>{
+  M={lock:true,onSubmit(){return false}};
+  sheet.innerHTML=`<header class="sheet-h"><h2 id="sheet-t">${title}</h2></header><div class="sheet-b"><p class="ob-lead" style="margin:0">${text}</p></div><footer class="sheet-f"><span class="sp"></span>${opts.map((o,i)=>`<button type="button" class="btn ${o.primary?'primary':''}" data-pick="${i}">${o.label}</button>`).join('')}</footer>`;
+  scrim.hidden=false;document.body.classList.add('locked');
+  const h=e=>{const b=e.target.closest('[data-pick]');if(!b)return;sheet.removeEventListener('click',h);closeModal();res(opts[+b.dataset.pick].v)};
+  sheet.addEventListener('click',h);
+})}
+/* first sync after signing in on this device */
+async function afterSignIn(){
+  let r;try{r=await remoteGet()}catch(e){setSync('error');return 'error'}
+  if(!r){try{S.updatedAt=Date.now();storeLocal();await remotePut()}catch(e){}META={uid:user.id,at:Date.now()};saveMeta();setSync('ok');return 'new'}
+  if(!hasData(S)){applyRemote(r.data);META={uid:user.id,at:Date.now()};saveMeta();setSync('ok');return 'restored'}
+  const pick=await choose(t('pick.h'),t('pick.p'),[{label:t('pick.local'),v:'local'},{label:t('pick.remote'),v:'remote',primary:true}]);
+  if(pick==='remote')applyRemote(r.data);else{S.updatedAt=Date.now();storeLocal();try{await remotePut()}catch(e){}}
+  META={uid:user.id,at:Date.now()};saveMeta();setSync('ok');
+  return pick==='remote'?'restored':'kept';
+}
+function authErr(e){
+  const m=String((e&&e.message)||e||'');
+  if(/invalid login/i.test(m))return t('err.badLogin');
+  if(/already registered|already exists/i.test(m))return t('err.exists');
+  if(/at least 6|password should/i.test(m))return t('err.weak');
+  if(/not confirmed/i.test(m))return t('err.confirm');
+  if(/fetch|network/i.test(m))return t('err.net');
+  return t('err.generic',{m:esc(m)});
+}
+async function doAuth(mode,email,password){
+  email=String(email||'').trim();
+  if(!email||!password)return {err:t('err.missing')};
+  if(password.length<6)return {err:t('err.weak')};
+  try{
+    const r=mode==='signup'?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+    if(r.error)return {err:authErr(r.error)};
+    if(!r.data||!r.data.session)return {err:t('err.confirm')};
+    user=r.data.session.user;
+    const res=await afterSignIn();
+    moodleMaybe(true);
+    return {ok:true,res};
+  }catch(e){return {err:t('err.net')}}
+}
+async function forgotPw(email,out){
+  email=String(email||'').trim();
+  if(!email){out.textContent=t('err.missing');out.classList.add('bad');return}
+  try{const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    if(error){out.textContent=authErr(error);out.classList.add('bad')}else{out.textContent=t('acc.resetSent');out.classList.remove('bad')}}
+  catch(e){out.textContent=t('err.net');out.classList.add('bad')}
+}
+function authFields(prefix,mode,email){
+  return `<div class="seg" role="group" aria-label="${t('sec.account')}">${['signup','signin'].map(m=>`<button type="button" data-act="${prefix}-mode" data-v="${m}" aria-pressed="${mode===m}">${t(m==='signup'?'acc.new':'acc.signin')}</button>`).join('')}</div>
+  <label class="field"><span>${t('acc.email')}</span><input type="email" id="${prefix}-email" required autocomplete="email" inputmode="email" value="${esc(email||'')}"></label>
+  <label class="field"><span>${t('acc.pass')}</span><input type="password" id="${prefix}-pass" required minlength="6" autocomplete="${mode==='signup'?'new-password':'current-password'}"><small class="ob-hint">${t('acc.passHint')}</small></label>
+  <p class="ob-hint bad" id="${prefix}-err" aria-live="polite"></p>
+  ${mode==='signin'?`<button type="button" class="lnk" data-act="${prefix}-forgot" style="align-self:flex-start">${t('acc.forgot')}</button>`:''}`;
+}
+let AU={mode:'signup'};
+function authModal(mode,email){
+  AU.mode=mode;
+  openModal({title:t('acc.open'),body:`<p class="hint" style="margin:0">${t('acc.p')}</p>${authFields('au',mode,email)}`,submitLabel:t(mode==='signup'?'acc.new':'acc.signin'),
+    onSubmit(f){
+      const btn=f.querySelector('button[type=submit]'), err=$('#au-err');btn.disabled=true;btn.textContent=t('acc.working');err.textContent='';
+      doAuth(AU.mode,$('#au-email').value,$('#au-pass').value).then(r=>{
+        if(r.err){if(err.isConnected){err.textContent=r.err;btn.disabled=false;btn.textContent=t(AU.mode==='signup'?'acc.new':'acc.signin')}else toast(r.err);return}
+        if(M)closeModal();render();toast(t(r.res==='restored'?'toast.restored2':'toast.signedIn'));
+      });
+      return false;
+    }});
+}
+function passwordModal(){
+  openModal({title:t('acc.newPass'),body:`<label class="field"><span>${t('acc.pass')}</span><input type="password" id="np-pass" required minlength="6" autocomplete="new-password"><small class="ob-hint">${t('acc.passHint')}</small></label>`,submitLabel:t('acc.newPassBtn'),
+    onSubmit(f){const p=$('#np-pass').value;if(p.length<6){toast(t('err.weak'));return false}
+      sb.auth.updateUser({password:p}).then(({error})=>{if(error)toast(authErr(error));else{closeModal();toast(t('toast.passSaved'));syncNow()}});return false}});
+}
+async function signOut(){
+  try{await sb.auth.signOut()}catch(e){}
+  user=null;META={};saveMeta();clearTimeout(pushTimer);
+  const lang=L;S=defaults();S.profile.lang=lang;storeLocal();setSync('local');
+  toast(t('toast.signedOut'));location.hash='today';render();obOpen();
+}
+async function cloudInit(){
+  if(!sb)return;
+  sb.auth.onAuthStateChange((ev,session)=>{
+    if(ev==='PASSWORD_RECOVERY'){user=session?session.user:null;setTimeout(passwordModal,50);return}
+    if(ev==='SIGNED_OUT'){user=null;setSync('local');return}
+    if(session)user=session.user;
+  });
+  try{const {data}=await sb.auth.getSession();user=data&&data.session?data.session.user:null}catch(e){user=null}
+  if(user){
+    if(!obEl.hidden){
+      await afterSignIn();
+      if(S.profile.onboarded){obEl.hidden=true;document.body.classList.remove('locked');render()}else obRender();
+    }else await syncNow();
+    moodleMaybe();
+  }
+  updateBadges();if(view==='prefs'&&!M)render();
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&user){if(Date.now()-(META.at||0)>15000)syncNow();moodleMaybe()}});
+window.addEventListener('online',()=>{if(user)syncNow()});
+setInterval(()=>{if(user&&document.visibilityState==='visible')syncNow()},120000);
+
+/* ================= Moodle deadlines (calendar export link) ================= */
+const MOODLE_HOST='online.ufe.edu.mn';
+function validMoodle(u){try{const x=new URL(String(u).trim());return x.protocol==='https:'&&x.hostname===MOODLE_HOST&&/\/calendar\/export_execute\.php$/.test(x.pathname)&&!!x.searchParams.get('authtoken')}catch(e){return false}}
+function icsDate(v){
+  const m=/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/.exec(v||'');if(!m)return '';
+  let d;
+  if(!m[4])d=new Date(+m[1],m[2]-1,+m[3],23,59);
+  else if(m[7])d=new Date(Date.UTC(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6]));
+  else d=new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6]);
+  return `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function parseICS(text){
+  const lines=String(text).replace(/\r?\n[ \t]/g,'').split(/\r?\n/), out=[];let ev=null;
+  for(const ln of lines){
+    if(ln==='BEGIN:VEVENT'){ev={};continue}
+    if(ln==='END:VEVENT'){if(ev&&ev.uid&&ev.start)out.push(ev);ev=null;continue}
+    if(!ev)continue;
+    const i=ln.indexOf(':');if(i<0)continue;
+    const key=ln.slice(0,i).split(';')[0].toUpperCase(), val=ln.slice(i+1).replace(/\\n/gi,'\n').replace(/\\([,;\\])/g,'$1');
+    if(key==='UID')ev.uid=val;else if(key==='SUMMARY')ev.summary=val;else if(key==='CATEGORIES')ev.category=val;
+    else if(key==='URL')ev.url=val;else if(key==='DTSTART')ev.start=icsDate(val);
+  }
+  return out;
+}
+const mdCount=()=>S.tasks.filter(x=>x.src==='moodle').length;
+function mergeMoodle(evs){
+  const seen=new Set(), now=new Date();
+  evs.forEach(ev=>{
+    seen.add(ev.uid);
+    const text=`${ev.category||''} ${ev.summary||''}`.toUpperCase();
+    const c=S.courses.find(k=>k.code&&text.includes(k.code.toUpperCase()));
+    const title=String(ev.summary||'Moodle').replace(/\s+(is due|should be completed|closes)\.?$/i,'').trim();
+    const x=S.tasks.find(k=>k.extId===ev.uid);
+    if(x){x.title=title;x.due=ev.start;x.moodleCourse=ev.category||'';if(!x.courseId&&c)x.courseId=c.id;return}
+    S.tasks.push({id:uid(),src:'moodle',extId:ev.uid,title,courseId:c?c.id:'',moodleCourse:ev.category||'',
+      type:/quiz|exam|test|шалгалт|тест|сорил/i.test(ev.summary||'')?'exam':'assignment',due:ev.start,priority:'medium',
+      remind:+S.profile.remindLead,done:false,notes:ev.url||'',subtasks:[]});
+  });
+  /* drop upcoming Moodle items that were removed from Moodle; keep past and finished ones */
+  S.tasks=S.tasks.filter(x=>x.src!=='moodle'||seen.has(x.extId)||x.done||new Date(x.due)<now);
+  return mdCount();
+}
+async function moodleSync(url){
+  const {data,error}=await sb.functions.invoke('moodle-calendar',{body:{url}});
+  if(error||!data||typeof data.ics!=='string')throw new Error('feed');
+  const n=mergeMoodle(parseICS(data.ics));
+  S.profile.moodleUrl=url;S.profile.moodleAt=Date.now();save();
+  return n;
+}
+function moodleMaybe(force){
+  const q=S.profile;if(!sb||!user||!q.moodleUrl)return;
+  if(!force&&Date.now()-(q.moodleAt||0)<30*60000)return;
+  moodleSync(q.moodleUrl).then(()=>{if(!M&&obEl.hidden&&['today','tasks','calendar','prefs'].includes(view))render()}).catch(()=>{});
+}
+const mdSteps=()=>`<ol class="md-steps">${['md.s1','md.s2','md.s3','md.s4'].map(k=>`<li>${t(k)}</li>`).join('')}</ol>`;
+function moodleModal(){
+  openModal({title:t('md.h'),body:`<p class="hint" style="margin:0">${t('md.p')}</p>${mdSteps()}
+    <label class="field"><span>${t('md.url')}</span><input type="url" id="md-url" required value="${esc(S.profile.moodleUrl)}" placeholder="${t('md.urlPh')}" autocomplete="off" spellcheck="false"><small class="ob-hint" id="md-err" aria-live="polite"></small></label>`,
+    submitLabel:t('md.connect'),
+    onSubmit(f){
+      const u=$('#md-url').value.trim(), err=$('#md-err'), btn=f.querySelector('button[type=submit]');
+      if(!validMoodle(u)){err.textContent=t('md.bad');err.classList.add('bad');return false}
+      btn.disabled=true;btn.textContent=t('acc.working');
+      moodleSync(u).then(n=>{closeModal();render();toast(t('md.done',{n}))}).catch(()=>{err.textContent=t('md.fail');err.classList.add('bad');btn.disabled=false;btn.textContent=t('md.connect')});
+      return false;
+    }});
+}
+
 /* ================= first-time welcome ================= */
-const OB={step:0,first:false,name:'',program:'',programOther:'',code:'',admit:0};
+const OB={cur:'welcome',plan:[],first:false,name:'',program:'',programOther:'',code:'',admit:0,authMode:'signup',email:'',md:null};
 const obEl=$('#ob');
+function obSkipStep(s){return (s==='account'&&(!sb||!!user))||(s==='moodle'&&(!sb||!user||!!S.profile.moodleUrl))}
 function obOpen(){
-  Object.assign(OB,{step:0,first:!S.profile.onboarded,name:S.profile.name,program:S.profile.program,programOther:S.profile.programOther,code:S.profile.code,admit:S.profile.admitYear});
+  Object.assign(OB,{cur:'welcome',plan:['welcome','account','about','moodle','done'],first:!S.profile.onboarded,md:null,
+    name:S.profile.name,program:S.profile.program,programOther:S.profile.programOther,code:S.profile.code,admit:S.profile.admitYear});
   obEl.hidden=false;document.body.classList.add('locked');obRender();
 }
+function obMove(dir){let i=OB.plan.indexOf(OB.cur);do{i+=dir}while(i>0&&i<OB.plan.length-1&&obSkipStep(OB.plan[i]));OB.cur=OB.plan[Math.max(0,i)];obRender()}
+function obSyncFromProfile(){Object.assign(OB,{name:S.profile.name,program:S.profile.program,programOther:S.profile.programOther,code:S.profile.code,admit:S.profile.admitYear})}
 function codeHint(code,typing){
   if(!code)return {ok:true,txt:t('ob.codeHint')};
   const r=parseCode(code);
@@ -1310,16 +1572,24 @@ function codeHint(code,typing){
   return typing&&code.length<6?{ok:true,txt:t('ob.codeHint')}:{ok:false,txt:t('ob.codeBad')};
 }
 function obRender(){
-  const dots=`<div class="ob-dots" aria-hidden="true">${[0,1,2].map(i=>`<i class="${i<=OB.step?'on':''}"></i>`).join('')}</div>`;
+  const vis=OB.plan.filter(s=>!obSkipStep(s)||s===OB.cur), idx=vis.indexOf(OB.cur);
+  const dots=`<div class="ob-dots" aria-hidden="true">${vis.map((s,i)=>`<i class="${i<=idx?'on':''}"></i>`).join('')}</div>`;
   let body='';
-  if(OB.step===0){
+  if(OB.cur==='welcome'){
     const hello=t('ob.hello');
     body=`<div class="ob-logo" aria-hidden="true"></div>
     <div><h1 id="ob-t" aria-label="${esc(hello)}">${[...hello].map((c,i)=>`<span class="ch" aria-hidden="true" style="--d:${(.35+i*.045).toFixed(3)}s">${c===' '?'&nbsp;':esc(c)}</span>`).join('')}</h1>
     <p class="ob-lead rise" style="--d:.75s">${t('ob.welcome')}</p></div>
     <ul class="ob-feat">${[[ICON.grid,'ob.f1'],[ICON.bell,'ob.f2'],[ICON.clock,'ob.f3']].map(([ic,k],i)=>`<li class="rise" style="--d:${(.95+i*.1).toFixed(2)}s">${ic}<span>${t(k)}</span></li>`).join('')}</ul>
     <div class="ob-actions rise" style="--d:1.3s"><button type="button" class="btn primary lg" data-act="ob-next">${t('ob.start')}</button></div>`;
-  }else if(OB.step===1){
+  }else if(OB.cur==='account'){
+    body=`<form id="ob-auth" class="ob-form" novalidate>
+      <div class="rise"><h1 id="ob-t" class="ob-h">${t('acc.h')}</h1><p class="ob-lead">${t('acc.p')}</p></div>
+      <div class="ob-form rise" style="--d:.08s">${authFields('oba',OB.authMode,OB.email)}</div>
+      <div class="ob-actions rise" style="--d:.16s"><button type="button" class="btn lg" data-act="ob-back">${t('ob.back')}</button><button type="submit" class="btn primary lg">${t(OB.authMode==='signup'?'acc.new':'acc.signin')}</button></div>
+      <div class="ob-alt rise" style="--d:.22s"><button type="button" class="lnk" data-act="ob-next">${t('acc.skip')}</button><span class="hint">${t('acc.skipNote')}</span></div>
+    </form>`;
+  }else if(OB.cur==='about'){
     const h=codeHint(OB.code,true), yr=OB.admit?acadStart()-OB.admit+1:0;
     body=`<form id="ob-form" class="ob-form" novalidate>
       <div class="rise"><h1 id="ob-t" class="ob-h">${t('ob.aboutH')}</h1><p class="ob-lead">${t('ob.aboutP')}</p></div>
@@ -1329,35 +1599,61 @@ function obRender(){
       <label class="field rise" style="--d:.18s"><span>${t('ob.code')}</span><input type="text" id="ob-code" data-ob="code" value="${esc(OB.code)}" maxlength="16" placeholder="${t('ob.codePh')}" autocapitalize="off" autocomplete="off" spellcheck="false"><small id="ob-code-hint" class="ob-hint ${h.ok?'':'bad'}" aria-live="polite">${h.txt}</small></label>
       <label class="field rise" style="--d:.24s"><span>${t('ob.orYear')}</span><select id="ob-year" data-ob="year">${yearOpts(yr)}</select></label>
       <div class="ob-actions rise" style="--d:.3s"><button type="button" class="btn lg" data-act="ob-back">${t('ob.back')}</button><button type="submit" class="btn primary lg">${t('ob.next')}</button></div>
-      <button type="button" class="lnk ob-skip" data-act="ob-skip">${t('ob.skip')}</button>
+      <button type="button" class="lnk ob-skip" data-act="ob-next">${t('ob.skip')}</button>
+    </form>`;
+  }else if(OB.cur==='moodle'){
+    body=`<form id="ob-md" class="ob-form" novalidate>
+      <div class="rise"><h1 id="ob-t" class="ob-h">${t('md.h')}</h1><p class="ob-lead">${t('md.p')}</p></div>
+      <div class="rise" style="--d:.06s">${mdSteps()}</div>
+      <label class="field rise" style="--d:.12s"><span>${t('md.url')}</span><input type="url" id="ob-md-url" placeholder="${t('md.urlPh')}" autocomplete="off" spellcheck="false"><small id="ob-md-err" class="ob-hint" aria-live="polite"></small></label>
+      <div class="ob-actions rise" style="--d:.18s"><button type="button" class="btn lg" data-act="ob-back">${t('ob.back')}</button><button type="submit" class="btn primary lg">${t('md.connect')}</button></div>
+      <button type="button" class="lnk ob-skip" data-act="ob-next">${t('ob.skip')}</button>
     </form>`;
   }else{
     const n=S.profile.name?`, ${esc(S.profile.name)}`:'';
     body=`<svg class="ob-check" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg>
     <div><h1 id="ob-t" class="ob-h rise" style="--d:.5s">${t('ob.doneH',{n})}</h1>
-    <p class="ob-lead rise" style="--d:.6s">${t('ob.doneP')}</p></div>
+    <p class="ob-lead rise" style="--d:.6s">${OB.md!=null?t('md.done',{n:OB.md})+'. ':''}${t('ob.doneP')}</p></div>
     <div class="ob-actions rise" style="--d:.7s"><button type="button" class="btn primary lg" data-act="ob-finish" data-v="courses">${t('ob.addCourses')}</button><button type="button" class="btn lg" data-act="ob-finish" data-v="today">${t('ob.toToday')}</button></div>
-    <button type="button" class="lnk ob-skip rise" style="--d:.8s" data-act="ob-sample">${t('ob.sample')}</button>`;
+    ${hasData(S)?'':`<button type="button" class="lnk ob-skip rise" style="--d:.8s" data-act="ob-sample">${t('ob.sample')}</button>`}`;
   }
-  obEl.innerHTML=`<div class="ob-in">${`<div class="ob-top">${dots}${langSeg('xs')}</div>`}${body}</div>`;
+  obEl.innerHTML=`<div class="ob-in"><div class="ob-top">${dots}${langSeg('xs')}</div>${body}</div>`;
   obEl.scrollTop=0;
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* move keyboard focus into the dialog without drawing a focus ring on the first button */
   const ttl=$('#ob-t');if(ttl){ttl.tabIndex=-1;ttl.style.outline='none'}
-  setTimeout(()=>{if(obEl.hidden)return;const f=OB.step===1?$('#ob-name'):ttl;if(f)f.focus({preventScroll:true})},reduce?0:(OB.step===1?120:60));
+  const first={account:'#oba-email',about:'#ob-name',moodle:'#ob-md-url'}[OB.cur];
+  setTimeout(()=>{if(obEl.hidden)return;const f=first?$(first):ttl;if(f)f.focus({preventScroll:true})},reduce?0:(first?120:60));
 }
+function obClose(){obEl.hidden=true;document.body.classList.remove('locked')}
 obEl.addEventListener('submit',e=>{
   e.preventDefault();
-  const code=OB.code.trim();
-  if(code&&!parseCode(code)){const hint=$('#ob-code-hint');hint.textContent=t('ob.codeBad');hint.classList.add('bad');$('#ob-code').focus();return}
-  Object.assign(S.profile,{name:OB.name.trim(),program:OB.program,programOther:OB.program==='other'?OB.programOther.trim():'',code:code.toLowerCase(),admitYear:OB.admit||0});
-  save();updateBadges();OB.step=2;obRender();
+  const f=e.target;
+  if(f.id==='ob-form'){
+    const code=OB.code.trim();
+    if(code&&!parseCode(code)){const hint=$('#ob-code-hint');hint.textContent=t('ob.codeBad');hint.classList.add('bad');$('#ob-code').focus();return}
+    Object.assign(S.profile,{name:OB.name.trim(),program:OB.program,programOther:OB.program==='other'?OB.programOther.trim():'',code:code.toLowerCase(),admitYear:OB.admit||0});
+    save();updateBadges();obMove(1);
+  }else if(f.id==='ob-auth'){
+    const btn=f.querySelector('button[type=submit]'), err=$('#oba-err');
+    OB.email=$('#oba-email').value;btn.disabled=true;btn.textContent=t('acc.working');err.textContent='';
+    doAuth(OB.authMode,OB.email,$('#oba-pass').value).then(r=>{
+      if(r.err){if(err.isConnected){err.textContent=r.err;btn.disabled=false;btn.textContent=t(OB.authMode==='signup'?'acc.new':'acc.signin')}return}
+      if(S.profile.onboarded){obClose();if(location.hash==='#today')render();else location.hash='today';toast(t('toast.restored2'));return}
+      obSyncFromProfile();obMove(1);
+    });
+  }else if(f.id==='ob-md'){
+    const u=$('#ob-md-url').value.trim(), err=$('#ob-md-err'), btn=f.querySelector('button[type=submit]');
+    if(!validMoodle(u)){err.textContent=t('md.bad');err.classList.add('bad');return}
+    btn.disabled=true;btn.textContent=t('acc.working');err.textContent='';
+    moodleSync(u).then(n=>{OB.md=n;obMove(1)}).catch(()=>{if(err.isConnected){err.textContent=t('md.fail');err.classList.add('bad');btn.disabled=false;btn.textContent=t('md.connect')}});
+  }
 });
 function obFinish(dest,sample){
   S.profile.onboarded=true;
   if(sample){const pr=S.profile;S=seed(L);S.profile=pr}
   else if(OB.first&&S.isSample){S.courses=[];S.classes=[];S.tasks=[];S.events=[];S.sessions=[];S.dismissed=[];S.isSample=false}
-  save();obEl.hidden=true;document.body.classList.remove('locked');
+  save();obClose();
   if(location.hash==='#'+dest)render();else location.hash=dest;
 }
 
@@ -1401,9 +1697,18 @@ document.addEventListener('click',e=>{
     case 'notif-on':enableNotif();break;
     case 'notif-off':S.profile.notify=false;save();render();break;
     case 'notif-test':sysNotify(t('notif.title'),t('notif.sample'),'ufe-test');break;
-    case 'ob-next':OB.step=1;obRender();break;
-    case 'ob-back':OB.step=0;obRender();break;
-    case 'ob-skip':OB.step=2;obRender();break;
+    case 'ob-next':obMove(1);break;
+    case 'ob-back':obMove(-1);break;
+    case 'oba-mode':OB.authMode=el.dataset.v;OB.email=$('#oba-email').value;obRender();break;
+    case 'oba-forgot':forgotPw($('#oba-email').value,$('#oba-err'));break;
+    case 'au-mode':authModal(el.dataset.v,$('#au-email').value);break;
+    case 'au-forgot':forgotPw($('#au-email').value,$('#au-err'));break;
+    case 'auth-open':authModal('signup');break;
+    case 'sync-now':syncNow().then(()=>{if(view==='prefs'&&!M)render()});break;
+    case 'sign-out':arm(el,t('arm.signout'),signOut);break;
+    case 'md-open':moodleModal();break;
+    case 'md-update':el.disabled=true;moodleSync(S.profile.moodleUrl).then(n=>{toast(t('md.done',{n}));render()}).catch(()=>{toast(t('md.fail'));el.disabled=false});break;
+    case 'md-off':S.profile.moodleUrl='';S.profile.moodleAt=0;save();render();break;
     case 'ob-finish':obFinish(el.dataset.v,false);break;
     case 'ob-sample':obFinish('today',true);break;
     case 'replay':obOpen();break;
@@ -1477,6 +1782,7 @@ setInterval(()=>{
 
 route();
 if(!S.profile.onboarded)obOpen();
+cloudInit();
 })();
 </script>
 <script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
